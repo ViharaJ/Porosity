@@ -163,6 +163,22 @@ def createROI(image):
     cv2.destroyAllWindows()
     return r 
     
+
+def labelImage(image, coordinates):
+    
+    for i in range(len(coordinates)):
+        coord = coordinates[i]
+        position = (int(coord[0] + coord[2]/2), int(coord[1] + coord[3]/2))
+        cv2.putText(image, 
+                    "ROI " + str(i + 1), 
+                    position,
+                    cv2.FONT_HERSHEY_SIMPLEX, #font family
+                     3, #font size
+                     (255, 80, 203), #font color
+                     5) #font stroke)
+    
+    return image
+
 #=============================MAIN========================================
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 acceptedFileTypes = ["png", "jpeg", "tif"]
@@ -261,6 +277,10 @@ for image_name in os.listdir(rootDir):
             
         #overlay image
         overlay_mask = createOverlayImage(original, pore_mask, mask)
+        
+        if len(crop_coord) > 0:
+            overlay_mask = labelImage(overlay_mask, crop_coord)
+            
         cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
         
         # save pore mask
@@ -280,6 +300,7 @@ for image_name in os.listdir(rootDir):
             porosity.append(len(x)/len(mx))
             print(porosity[-1])
         else:
+            
             for j  in range(len(crop_coord)):   
                 each_crop = crop_coord[j]
               
