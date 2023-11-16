@@ -4,6 +4,10 @@ Calculate porosity of opaque pores. Can select multiple ROI per image
 For ROI selection: use space or enter to finish current selection 
     and start a new one, use esc to terminate multiple ROI selection process.
 
+How to use: 
+    1. Install rembg if you don't have it already: https://github.com/danielgatis/rembg
+    2. Change rootDir to your image path and then run 
+    
 Options: 
     For mask to segement regolith mask from background
         1. REMBG mask
