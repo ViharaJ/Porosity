@@ -217,11 +217,17 @@ for image_name in os.listdir(rootDir):
         blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
         
         if len(crop_coord) > 0:
-            for each_crop  in crop_coord:   
-                # scale crop_coords to match original image size
-                each_crop = (np.array(each_crop)*(1/shrink_rate)).astype(int)
+            image_names.pop()
+            
+            # scale coordinates to match original size
+            crop_coord = (np.array(crop_coord)*(1/shrink_rate)).astype(int)
+            
+            
+            for j  in range(len(crop_coord)):   
+                each_crop = crop_coord[j]
                 
                 if np.any(each_crop) :
+                    image_names.append(image_name.split(".")[0] + "_ROI_" + str(j+1))
                     blackCanvas[each_crop[1]: each_crop[1] + each_crop[3], 
                                 each_crop[0]: each_crop[0] + each_crop[2]] = 255
             
@@ -261,17 +267,33 @@ for image_name in os.listdir(rootDir):
         cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
         
         print("Calculating porosity")
-        mx,my = np.where(mask == 255)
-        x, y = np.where(pore_mask < 30)
+        if len(crop_coord) == 0:
+            mx,my = np.where(mask == 255)
+            x, y = np.where(pore_mask < 30)
+            
+            
+            gen_output = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
+            (totalLabels, label_ids, values, centroid) = gen_output
+             
+            full_area = values[1, cv2.CC_STAT_AREA]
+            
+            porosity.append(len(x)/len(mx))
+            print(porosity[-1])
+        else:
+            for j  in range(len(crop_coord)):   
+                each_crop = crop_coord[j]
+              
+                crop = mask[each_crop[1]: each_crop[1] + each_crop[3], 
+                            each_crop[0]: each_crop[0] + each_crop[2]]
+                pore_crop = pore_mask[each_crop[1]: each_crop[1] + each_crop[3], 
+                            each_crop[0]: each_crop[0] + each_crop[2]]
+                
+                bg = cv2.countNonZero(crop)
+                p = cv2.countNonZero(cv2.bitwise_not(pore_crop))
+                
+                if bg != 0:
+                    porosity.append(p/bg)
+                    print(porosity[-1])
         
-        
-        gen_output = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
-        (totalLabels, label_ids, values, centroid) = gen_output
-         
-        full_area = values[1, cv2.CC_STAT_AREA]
-        
-        porosity.append(len(x)/len(mx))
-        print(porosity[-1])
-        
-# df = pd.DataFrame(data=porosity, columns=['Porosity'], index=image_names)
-# df.to_excel(rootDir + "\\" + " Porosity.xlsx")
+df = pd.DataFrame(data=porosity, columns=['Porosity'], index=image_names)
+df.to_excel(rootDir + "\\" + " Porosity.xlsx")
