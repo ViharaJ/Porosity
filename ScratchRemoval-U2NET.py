@@ -1,7 +1,8 @@
 '''
-Calculate porosity of opaque pores 
+Calculate porosity of opaque pores. Can select multiple ROI per image
 
-
+For ROI selection: use space or enter to finish current selection 
+    and start a new one, use esc to terminate multiple ROI selection process.
 
 Options: 
     For mask to segement regolith mask from background
@@ -28,7 +29,7 @@ import numpy as np
 from rembg import remove, new_session
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from PIL import Image
 
 #==============================FUNCTIONS===============================           
 
@@ -148,9 +149,18 @@ def createOverlayImage(img, pore_m, mask):
     
     return added_image
 
-
+def createROI(image):
+    """
+    returns [Top_Left_X, Top_Left_Y, Width, Height]
+    """
+    # Select ROI 
+    r = cv2.selectROIs("select the area", image) 
+    
+    cv2.destroyAllWindows()
+    return r 
+    
 #=============================MAIN========================================
-rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\OneFile"
+rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 acceptedFileTypes = ["png", "jpeg", "tif"]
 
 # CHANGE VARIABLES BELOW ACOORDING TO USE
@@ -162,6 +172,8 @@ pore_maskDir = createDir(rootDir, "Pore_Mask")
 overlay_imgDir = createDir(rootDir, "Overlay")
 image_names = []
 porosity = []
+use_same_ROI = False
+crop_coord = None
 for image_name in os.listdir(rootDir):
     
     if image_name.split(".")[-1] in acceptedFileTypes:
@@ -170,39 +182,92 @@ for image_name in os.listdir(rootDir):
         original = cv2.imread(rootDir + "\\" + image_name)
         gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
         
-        mask = None
+        # shrink image to get crop_coord
+        shrink_rate = 0.25
+        im = Image.fromarray(original)
+        smaller_img = im.resize((int(im.size[0]*shrink_rate), int(im.size[1]*shrink_rate)))
         
-        if createMaskDir:
+        
+        # get crop coordinates, 
+        # Controls: use space or enter to finish current selection 
+        # and start a new one, use esc to terminate multiple ROI selection process.
+        
+        if not use_same_ROI:
+            crop_coord = createROI(np.array(smaller_img))
+            user_val = input("Use same ROI (Y/N)?")
+            
+            if user_val.lower() == "y":
+                use_same_ROI = True
+           
+        
+        # create general Mask
+        mask = None
+        if createMaskDir:             
             mask = getRemBGMask(original)
-            cv2.imwrite(maskDir + "\\" + image_name, mask)
+            cv2.imwrite(maskDir + "\\" + image_name, mask)         
         else:
             mask =  cv2.imread(maskDir + "\\" + image_name, cv2.IMREAD_GRAYSCALE)
         
+
+        # Create cropped mask if necessary
+        blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
         
+        if len(crop_coord) > 0:
+            for each_crop  in crop_coord:   
+                # scale crop_coords to match original image size
+                each_crop = (np.array(each_crop)*(1/shrink_rate)).astype(int)
+                
+                if np.any(each_crop) :
+                    blackCanvas[each_crop[1]: each_crop[1] + each_crop[3], 
+                                each_crop[0]: each_crop[0] + each_crop[2]] = 255
+            
+            mask = np.bitwise_and(blackCanvas, mask)
+            
+            
         # SELECT HOW PORE MASK WILL BE PRODUCED
         print("Creating pore mask")
         pore_mask = getPoreMask('Otsu')
         print("Finished creating pore mask")
     
+        output = cv2.connectedComponentsWithStats(pore_mask, 4, cv2.CV_32S)
+        (totalLabels, label_ids, values, centroid) = output
         
+        allAreas = []
+        componentMask = None
+        for i in range(1, totalLabels): 
+            area = values[i, cv2.CC_STAT_AREA]
+            allAreas.append(area)
+            
+            if componentMask is not None:
+                temp =  (label_ids == i).astype("uint8") * 255
+                componentMask = cv2.bitwise_or(temp, componentMask)
+            else:
+                componentMask = (label_ids == i).astype("uint8") * 255
+
+    
+        
+        plt.hist(allAreas, bins=np.linspace(0,200,10))
+        plt.show()
+            
         #overlay image
         overlay_mask = createOverlayImage(original, pore_mask, mask)
         cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
         
-        
-        cv2.imshow("g", pore_mask)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
-         
+        # save pore mask
         cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
         
         print("Calculating porosity")
         mx,my = np.where(mask == 255)
         x, y = np.where(pore_mask < 30)
         
+        
+        gen_output = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
+        (totalLabels, label_ids, values, centroid) = gen_output
+         
+        full_area = values[1, cv2.CC_STAT_AREA]
+        
         porosity.append(len(x)/len(mx))
         print(porosity[-1])
-
-
-df = pd.DataFrame(data=porosity, columns=['Porosity'], index=image_names)
-df.to_excel(rootDir + "\\" + " Porosity.xlsx")
+        
+# df = pd.DataFrame(data=porosity, columns=['Porosity'], index=image_names)
+# df.to_excel(rootDir + "\\" + " Porosity.xlsx")
