@@ -252,6 +252,16 @@ def calculatePorosity(m, p_m, crop_coords=None):
     
     return porosity
 
+def gridSplit(img, m, rows, cols):
+    """
+    img: image
+    m: mask
+    returns: list of crop coordinates [[Top_Left_X, Top_Left_Y, Width, Height]...]
+    """
+    #get contour
+    #create box around contour 
+    #iterate over box, create ROIs
+    #return
 #=============================MAIN========================================
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 acceptedFileTypes = ["png", "jpeg", "tif"]
