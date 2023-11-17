@@ -179,6 +179,10 @@ def labelImage(image, coordinates):
     
     return image
 
+def processSingle(image, m, p_m):
+    #overlay image
+    overlay_mask = createOverlayImage(original, pore_mask, mask)
+    
 #=============================MAIN========================================
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 acceptedFileTypes = ["png", "jpeg", "tif"]
