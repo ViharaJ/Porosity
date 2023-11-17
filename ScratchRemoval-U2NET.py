@@ -258,7 +258,7 @@ acceptedFileTypes = ["png", "jpeg", "tif"]
 
 # CHANGE VARIABLES BELOW ACOORDING TO USE
 createMaskDir = True 
-maskDir =  createDir(rootDir, "BestMask")
+maskDir =  createDir(rootDir, "Segment Mask")
 pore_maskDir = createDir(rootDir, "Pore_Mask")
 
 
@@ -315,28 +315,6 @@ for image_name in os.listdir(rootDir):
         print("Calculating porosity")
         Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
     
-        # output = cv2.connectedComponentsWithStats(pore_mask, 4, cv2.CV_32S)
-        # (totalLabels, label_ids, values, centroid) = output
-        
-        # allAreas = []
-        # componentMask = None
-        # for i in range(1, totalLabels): 
-        #     area = values[i, cv2.CC_STAT_AREA]
-        #     allAreas.append(area)
-            
-        #     if componentMask is not None:
-        #         temp =  (label_ids == i).astype("uint8") * 255
-        #         componentMask = cv2.bitwise_or(temp, componentMask)
-        #     else:
-        #         componentMask = (label_ids == i).astype("uint8") * 255
-        # plt.hist(allAreas, bins=np.linspace(0,200,10))
-        # plt.show()        
-        
-        # gen_output = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
-        # (totalLabels, label_ids, values, centroid) = gen_output
-         
-        # full_area = values[1, cv2.CC_STAT_AREA]
-        
         
 df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
 df.to_excel(rootDir + "\\" + " Porosity.xlsx")
