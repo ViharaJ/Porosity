@@ -153,14 +153,22 @@ def createOverlayImage(img, pore_m, mask):
     
     return added_image
 
-def createROI(image):
+def createROI(image, shrink_rate = 0.25):
     """
+    shrink_rate: how much to shrink the image by
     returns [Top_Left_X, Top_Left_Y, Width, Height]
     """
-    # Select ROI 
-    r = cv2.selectROIs("select the area", image) 
+    # Resize image
+    im = Image.fromarray(image)
+    smaller_img = im.resize((int(im.size[0]*shrink_rate), int(im.size[1]*shrink_rate)))
+   
+    #get ROIS
+    r = cv2.selectROIs("select the area", np.array(smaller_img)) 
+    r = np.array(r)
     
-    cv2.destroyAllWindows()
+    # resize coordinates to make original dimensions 
+    r = (np.array(r)*(1/shrink_rate)).astype(int)
+    
     return r 
     
 
@@ -205,20 +213,14 @@ for image_name in os.listdir(rootDir):
         print("Processing ", image_name)
         original = cv2.imread(rootDir + "\\" + image_name)
         gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
-        
-        # shrink image to get crop_coord
-        shrink_rate = 0.25
-        im = Image.fromarray(original)
-        smaller_img = im.resize((int(im.size[0]*shrink_rate), int(im.size[1]*shrink_rate)))
-        
+
         
         # get crop coordinates, 
         # Controls: use space or enter to finish current selection 
         # and start a new one, use esc to terminate multiple ROI selection process.
-        
         if not use_same_ROI:
-            crop_coord = createROI(np.array(smaller_img))
-            user_val = input("Use same ROI (Y/N)?")
+            crop_coord = createROI(original)
+            user_val = input("Use same ROI (Y)?")
             
             if user_val.lower() == "y":
                 use_same_ROI = True
@@ -238,10 +240,6 @@ for image_name in os.listdir(rootDir):
         
         if len(crop_coord) > 0:
             image_names.pop()
-            
-            # scale coordinates to match original size
-            crop_coord = (np.array(crop_coord)*(1/shrink_rate)).astype(int)
-            
             
             for j  in range(len(crop_coord)):   
                 each_crop = crop_coord[j]
