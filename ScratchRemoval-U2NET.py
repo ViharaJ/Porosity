@@ -164,10 +164,16 @@ def createROI(image, shrink_rate = 0.25):
    
     #get ROIS
     r = cv2.selectROIs("select the area", np.array(smaller_img)) 
+    cv2.destroyAllWindows()
     r = np.array(r)
     
+    # remove any empty ROIS
+    for i in range(len(r)):
+        if not np.any(r[i]):
+           del r[i]
+         
     # resize coordinates to make original dimensions 
-    r = (np.array(r)*(1/shrink_rate)).astype(int)
+    r = (r*(1/shrink_rate)).astype(int)
     
     return r 
     
@@ -187,9 +193,31 @@ def labelImage(image, coordinates):
     
     return image
 
-def processSingle(image, m, p_m):
-    #overlay image
-    overlay_mask = createOverlayImage(original, pore_mask, mask)
+def getSegmentMask(img, crop_coord=None):
+    """
+    img: original image array
+    crop_coord: optional
+    returns: mask to segement regolith from background
+    """
+    mask = None
+    if createMaskDir:             
+        mask = getRemBGMask(original)
+    else:
+        mask =  cv2.imread(maskDir + "\\" + image_name, cv2.IMREAD_GRAYSCALE)
+        
+    if crop_coord is not None:
+        # Create cropped mask if necessary
+        blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
+            
+        for j in range(len(crop_coord)):   
+            each_crop = crop_coord[j]
+            blackCanvas[each_crop[1]: each_crop[1] + each_crop[3], 
+                        each_crop[0]: each_crop[0] + each_crop[2]] = 255
+        
+        mask = np.bitwise_and(blackCanvas, mask)
+        
+    
+    return mask
     
 #=============================MAIN========================================
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
@@ -227,30 +255,8 @@ for image_name in os.listdir(rootDir):
            
         
         # create general Mask
-        mask = None
-        if createMaskDir:             
-            mask = getRemBGMask(original)
-            cv2.imwrite(maskDir + "\\" + image_name, mask)         
-        else:
-            mask =  cv2.imread(maskDir + "\\" + image_name, cv2.IMREAD_GRAYSCALE)
-        
-
-        # Create cropped mask if necessary
-        blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
-        
-        if len(crop_coord) > 0:
-            image_names.pop()
-            
-            for j  in range(len(crop_coord)):   
-                each_crop = crop_coord[j]
-                
-                if np.any(each_crop) :
-                    image_names.append(image_name.split(".")[0] + "_ROI_" + str(j+1))
-                    blackCanvas[each_crop[1]: each_crop[1] + each_crop[3], 
-                                each_crop[0]: each_crop[0] + each_crop[2]] = 255
-            
-            mask = np.bitwise_and(blackCanvas, mask)
-            
+        mask = getSegmentMask(original, crop_coord)
+        cv2.imwrite(maskDir + "\\" + image_name, mask)    
             
         # SELECT HOW PORE MASK WILL BE PRODUCED
         print("Creating pore mask")
