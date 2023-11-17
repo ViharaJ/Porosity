@@ -271,7 +271,6 @@ crop_coord = None
 for image_name in os.listdir(rootDir):
     crop_coord = None
     if image_name.split(".")[-1] in acceptedFileTypes:
-        image_names.append(image_name)
         print("Processing ", image_name)
         original = cv2.imread(rootDir + "\\" + image_name)
         gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
@@ -287,7 +286,14 @@ for image_name in os.listdir(rootDir):
             if user_val.lower() == "y":
                 use_same_ROI = True
            
-        
+        #Update name list:
+        if (len(crop_coord) == 0):
+            image_names.append(image_name)
+        else:
+            for i in range(len(crop_coord)):
+                image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
+                
+            
         # create general Mask
         mask = getSegmentMask(original, crop_coord)
         cv2.imwrite(maskDir + "\\" + image_name, mask)    
@@ -299,6 +305,15 @@ for image_name in os.listdir(rootDir):
         # save pore mask
         cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
         print("Finished creating pore mask")
+        
+        #overlay image
+        overlay_mask = createOverlayImage(original, pore_mask, mask)
+        overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+        cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
+        
+        
+        print("Calculating porosity")
+        Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
     
         # output = cv2.connectedComponentsWithStats(pore_mask, 4, cv2.CV_32S)
         # (totalLabels, label_ids, values, centroid) = output
@@ -315,17 +330,7 @@ for image_name in os.listdir(rootDir):
         #     else:
         #         componentMask = (label_ids == i).astype("uint8") * 255
         # plt.hist(allAreas, bins=np.linspace(0,200,10))
-        # plt.show()
-            
-        #overlay image
-        overlay_mask = createOverlayImage(original, pore_mask, mask)
-        overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
-        cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
-        
-        
-        print("Calculating porosity")
-        Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
-        
+        # plt.show()        
         
         # gen_output = cv2.connectedComponentsWithStats(mask, 4, cv2.CV_32S)
         # (totalLabels, label_ids, values, centroid) = gen_output
@@ -333,5 +338,5 @@ for image_name in os.listdir(rootDir):
         # full_area = values[1, cv2.CC_STAT_AREA]
         
         
-df = pd.DataFrame(data=[Porosity], columns=['Porosity'], index=image_names)
+df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
 df.to_excel(rootDir + "\\" + " Porosity.xlsx")
