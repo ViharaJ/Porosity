@@ -271,9 +271,9 @@ def gridSplit(img, rows, cols):
     curr_x, curr_y = x , y 
     
     for i in range(cols):
-        curr_x = curr_x + i*grid_w
+        curr_x = x + i*grid_w
         for j in range(rows):
-            curr_y = curr_y + j*grid_h
+            curr_y = y + j*grid_h
             each_coord = [curr_x, curr_y, grid_w, grid_h]
             crop_coord.append(each_coord)
         curr_y = y    
@@ -313,7 +313,10 @@ for image_name in os.listdir(rootDir):
             
             if user_val.lower() == "y":
                 use_same_ROI = True
-           
+        
+        #TODO: REMOVE AFTER TESTING
+        crop_coord = gridSplit(original, 3, 1)
+        print(crop_coord)
     
         #Update name list:
         if (len(crop_coord) == 0):
@@ -322,7 +325,7 @@ for image_name in os.listdir(rootDir):
             for i in range(len(crop_coord)):
                 image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
                 
-            
+        
         # create general Mask
         mask = getSegmentMask(original, crop_coord)
         cv2.imwrite(maskDir + "\\" + image_name, mask)    
@@ -344,9 +347,7 @@ for image_name in os.listdir(rootDir):
         print("Calculating porosity")
         Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
     
-        #TODO: REMOVE AFTER TESTING
-        crop_coord = gridSplit(original, 3, 2)
-        print(crop_coord)
+        
         
 df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
 df.to_excel(rootDir + "\\" + " Porosity.xlsx")
