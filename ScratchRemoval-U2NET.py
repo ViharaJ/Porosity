@@ -315,7 +315,7 @@ for image_name in os.listdir(rootDir):
                 use_same_ROI = True
         
         #TODO: REMOVE AFTER TESTING
-        crop_coord = gridSplit(original, 3, 1)
+        crop_coord = gridSplit(original, 3, 4)
         print(crop_coord)
     
         #Update name list:
