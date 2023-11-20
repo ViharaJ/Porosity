@@ -11,7 +11,9 @@ class App(ctk.CTk):
         self.title("Quick Preview")
         self.geometry('830x600')
         
-        self.menuPanel = MenuPanel(self)
+        self.init_params()
+        
+        self.menuPanel = MenuPanel(self, self.start_vars)
         self.menuPanel.pack()
         
         self.process_button = ctk.CTkButton(self, text="Apply", command=self.analyzePorosity)
@@ -19,7 +21,15 @@ class App(ctk.CTk):
         
         self.mainloop()
     
+    
+    def init_params(self):
+        self.start_vars = {
+            "Rows": ctk.IntVar(value=0),
+            "Columns": ctk.IntVar(value=0),
+            "Thresh": ctk.StringVar(value=0),
+            }
         
+            
     def analyzePorosity(self):
         print("successfully called")
         pass
@@ -40,11 +50,11 @@ class MenuPanel(ctk.CTkTabview):
         
         
 class GridSplitFrame(ctk.CTkFrame):
-    def __init__(self, parent):
+    def __init__(self, parent, params):
         super().__init__(parent)
         
         self.e1 = ctk.CTkLabel(self, text="Rows")
-        self.e2.pack()
+        self.e1.pack()
         self.rows = ctk.CTkEntry(self)
         self.rows.pack(pady=5, padx=5, expand=True, fill='x')
         
