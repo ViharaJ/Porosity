@@ -252,29 +252,31 @@ def calculatePorosity(m, p_m, crop_coords=None):
     
     return porosity
 
-def gridSplit(img, m, rows, cols):
+def gridSplit(img, rows, cols):
     """
     img: image
     m: mask
     returns: list of crop coordinates [[Top_Left_X, Top_Left_Y, Width, Height]...]
     """
     #get contour
-    contours, hierarchy = cv2.findContours(m, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(getSegmentMask(img), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     
     #create box around contour 
     cnt = contours[0] 
-    M = cv2.moments(cnt)
-    x,y,w,h = cv2.boundingRect(cnt) #row, col, num of cols, num of rows
+    x,y,w,h = cv2.boundingRect(cnt) #col, row, num of cols, num of rows
     
-    grid_w, grid_h = rows/w, cols/h
-
+    grid_w, grid_h = int(w/cols), int(h/rows)
     #iterate over box, create ROIs
     crop_coord = []
-    for i in range(x, x+h, h):
-        for j in range(y, y + w, w):
-            each_coord = [i,j, w, h]
-            crop_coord.apend(each_coord)
-            
+    curr_x, curr_y = x , y 
+    
+    for i in range(cols):
+        curr_x = curr_x + i*grid_w
+        for j in range(rows):
+            curr_y = curr_y + j*grid_h
+            each_coord = [curr_x, curr_y, grid_w, grid_h]
+            crop_coord.append(each_coord)
+        curr_y = y    
     
     return crop_coord
 
@@ -312,6 +314,7 @@ for image_name in os.listdir(rootDir):
             if user_val.lower() == "y":
                 use_same_ROI = True
            
+    
         #Update name list:
         if (len(crop_coord) == 0):
             image_names.append(image_name)
@@ -341,6 +344,9 @@ for image_name in os.listdir(rootDir):
         print("Calculating porosity")
         Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
     
+        #TODO: REMOVE AFTER TESTING
+        crop_coord = gridSplit(original, 3, 2)
+        print(crop_coord)
         
 df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
 df.to_excel(rootDir + "\\" + " Porosity.xlsx")
