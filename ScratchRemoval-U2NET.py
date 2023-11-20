@@ -259,9 +259,25 @@ def gridSplit(img, m, rows, cols):
     returns: list of crop coordinates [[Top_Left_X, Top_Left_Y, Width, Height]...]
     """
     #get contour
+    contours, hierarchy = cv2.findContours(m, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    
     #create box around contour 
+    cnt = contours[0] 
+    M = cv2.moments(cnt)
+    x,y,w,h = cv2.boundingRect(cnt) #row, col, num of cols, num of rows
+    
+    grid_w, grid_h = rows/w, cols/h
+
     #iterate over box, create ROIs
-    #return
+    crop_coord = []
+    for i in range(x, x+h, h):
+        for j in range(y, y + w, w):
+            each_coord = [i,j, w, h]
+            crop_coord.apend(each_coord)
+            
+    
+    return crop_coord
+
 #=============================MAIN========================================
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 acceptedFileTypes = ["png", "jpeg", "tif"]
