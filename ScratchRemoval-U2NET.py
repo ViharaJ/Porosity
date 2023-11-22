@@ -261,9 +261,9 @@ def gridSplit(img, rows, cols):
     #get contour
     contours, hierarchy = cv2.findContours(getSegmentMask(img), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     
-    #create box around contour 
+    # create box around contour 
     cnt = contours[0] 
-    x,y,w,h = cv2.boundingRect(cnt) #col, row, num of cols, num of rows
+    x,y,w,h = cv2.boundingRect(cnt) # col, row, num of cols, num of rows
     
     grid_w, grid_h = int(w/cols), int(h/rows)
     #iterate over box, create ROIs
