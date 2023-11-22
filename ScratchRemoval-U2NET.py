@@ -315,7 +315,7 @@ for image_name in os.listdir(rootDir):
                 use_same_ROI = True
         
         #TODO: REMOVE AFTER TESTING
-        crop_coord = gridSplit(original, 3, 4)
+        crop_coord = gridSplit(original, 3, 2)
         print(crop_coord)
     
         #Update name list:
@@ -341,6 +341,15 @@ for image_name in os.listdir(rootDir):
         #overlay image
         overlay_mask = createOverlayImage(original, pore_mask, mask)
         overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+        
+        #label image 
+        if (len(crop_coord) > 0):
+            for coords in crop_coord:
+                start = (coords[0], coords[1])
+                end = (coords[0] + coords[2], coords[1] + coords[3])
+                
+                overlay_mask = cv2.rectangle(overlay_mask, start, end, (0, 0, 0), 4)
+                
         cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
         
         
