@@ -109,10 +109,12 @@ def createDir(root, folderName):
     return newPath
 
 
-def getPoreMask(option, path = None):
+def getPoreMask(option, gray, mask, path = None):
     
     '''
     option is a string, acceptable inputs are: Otsu, Bin, Manual
+    gray: gray scale image,
+    mask: black and white mask,
     returns: white background with black pores mask
     '''
     pore_mask = None
@@ -121,7 +123,7 @@ def getPoreMask(option, path = None):
         pore_mask_inv = cv2.bitwise_not(pore_mask)
         pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
         pore_mask = cv2.bitwise_not(pore_mask_inv)
-    elif option.strip() == 'Bin':
+    elif option.strip() == 'Binary':
         pore_mask = createPoreMaskBin(gray, mask, 70, 255)   
         pore_mask_inv = cv2.bitwise_not(pore_mask)
         pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
@@ -149,7 +151,7 @@ def createOverlayImage(img, pore_m, mask):
     mask[bgx, bgy,:] = [0,255,0]
  
     # overal mask onto original
-    added_image = cv2.addWeighted(original,0.4,mask,0.3,0)
+    added_image = cv2.addWeighted(img,0.4,mask,0.3,0)
     
     return added_image
 
@@ -167,10 +169,10 @@ def createROI(image, shrink_rate = 0.25):
     cv2.destroyAllWindows()
     r = np.array(r)
     
-    # remove any empty ROIS
-    for i in range(len(r)):
-        if not np.any(r[i]):
-           del r[i]
+    # # remove any empty ROIS
+    # for i in range(len(r)):
+    #     if not np.any(r[i]):
+    #        del r[i]
          
     # resize coordinates to make original dimensions 
     r = (r*(1/shrink_rate)).astype(int)
@@ -193,7 +195,7 @@ def labelImage(image, coordinates):
     
     return image
 
-def getSegmentMask(img, crop_coord=None):
+def getSegmentMask(img, createMaskDir=True, crop_coord=None, fullPath=None):
     """
     img: original image array
     crop_coord: optional
@@ -201,13 +203,13 @@ def getSegmentMask(img, crop_coord=None):
     """
     mask = None
     if createMaskDir:             
-        mask = getRemBGMask(original)
+        mask = getRemBGMask(img)
     else:
-        mask =  cv2.imread(maskDir + "\\" + image_name, cv2.IMREAD_GRAYSCALE)
+        mask =  cv2.imread(fullPath, cv2.IMREAD_GRAYSCALE)
         
-    if crop_coord is not None:
+    if len(crop_coord) > 0:
         # Create cropped mask if necessary
-        blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
+        blackCanvas = np.full(shape=(img.shape[0], img.shape[1]), fill_value=0, dtype=np.uint8)
             
         for j in range(len(crop_coord)):   
             each_crop = crop_coord[j]
@@ -228,7 +230,7 @@ def calculatePorosity(m, p_m, crop_coords=None):
     """
     porosity = []
     
-    if crop_coord is None:
+    if crop_coords is None:
         bg = cv2.countNonZero(m)
         p = cv2.countNonZero(cv2.bitwise_not(p_m))
         
@@ -261,9 +263,9 @@ def gridSplit(img, rows, cols):
     #get contour
     contours, hierarchy = cv2.findContours(getSegmentMask(img), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     
-    #create box around contour 
+    # create box around contour 
     cnt = contours[0] 
-    x,y,w,h = cv2.boundingRect(cnt) #col, row, num of cols, num of rows
+    x,y,w,h = cv2.boundingRect(cnt) # col, row, num of cols, num of rows
     
     grid_w, grid_h = int(w/cols), int(h/rows)
     #iterate over box, create ROIs
@@ -280,83 +282,108 @@ def gridSplit(img, rows, cols):
     
     return crop_coord
 
-#=============================MAIN========================================
-rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
-acceptedFileTypes = ["png", "jpeg", "tif"]
 
-# CHANGE VARIABLES BELOW ACOORDING TO USE
-createMaskDir = True 
-maskDir =  createDir(rootDir, "Segment Mask")
-pore_maskDir = createDir(rootDir, "Pore_Mask")
-
-
-overlay_imgDir = createDir(rootDir, "Overlay")
-image_names = []
-Porosity = []
-use_same_ROI = False
-crop_coord = None
-
-for image_name in os.listdir(rootDir):
+def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, use_same_ROI=None):
     crop_coord = None
-    if image_name.split(".")[-1] in acceptedFileTypes:
-        print("Processing ", image_name)
-        original = cv2.imread(rootDir + "\\" + image_name)
-        gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    image_names = [] 
+    
+    original = cv2.imread(rootDir + "\\" + img)
+    gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    
+    # get crop coordinates, 
+    # Controls: use space or enter to finish current selection 
+    # and start a new one, use esc to terminate multiple ROI selection process.
+    if not use_same_ROI:
+        crop_coord = createROI(original)
+        user_val = input("Use same ROI (Y)?")
+        
+        if user_val.lower() == "y":
+            use_same_ROI = True
 
-        
-        # get crop coordinates, 
-        # Controls: use space or enter to finish current selection 
-        # and start a new one, use esc to terminate multiple ROI selection process.
-        if not use_same_ROI:
-            crop_coord = createROI(original)
-            user_val = input("Use same ROI (Y)?")
+    #Update name list:
+    if (len(crop_coord) == 0):
+        image_names.append(img)
+    else:
+        for i in range(len(crop_coord)):
+            image_names.append(img.split('.')[0] + "_ROI_" + str(i + 1))
             
-            if user_val.lower() == "y":
-                use_same_ROI = True
-        
-        #TODO: REMOVE AFTER TESTING
-        crop_coord = gridSplit(original, 3, 2)
-        print(crop_coord)
     
-        #Update name list:
-        if (len(crop_coord) == 0):
-            image_names.append(image_name)
-        else:
-            for i in range(len(crop_coord)):
-                image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
-                
+    # create general Mask
+    #TODO: change to use variable
+    mask = getSegmentMask(original, True, crop_coord)
+    cv2.imwrite(maskDir + "\\" + img, mask)    
         
-        # create general Mask
-        mask = getSegmentMask(original, crop_coord)
-        cv2.imwrite(maskDir + "\\" + image_name, mask)    
-            
-        # SELECT HOW PORE MASK WILL BE PRODUCED
-        print("Creating pore mask")
-        pore_mask = getPoreMask('Otsu')
-        
-        # save pore mask
-        cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
-        print("Finished creating pore mask")
-        
-        #overlay image
-        overlay_mask = createOverlayImage(original, pore_mask, mask)
-        overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
-        
-        #label image 
-        if (len(crop_coord) > 0):
-            for coords in crop_coord:
-                start = (coords[0], coords[1])
-                end = (coords[0] + coords[2], coords[1] + coords[3])
-                
-                overlay_mask = cv2.rectangle(overlay_mask, start, end, (0, 0, 0), 4)
-                
-        cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
-        
-        
-        print("Calculating porosity")
-        Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
+    # SELECT HOW PORE MASK WILL BE PRODUCED
+    print("Creating pore mask")
+    pore_mask = getPoreMask(setting, gray, mask)
     
+    # save pore mask
+    cv2.imwrite(pore_maskDir  + "\\" + img, pore_mask)
+    print("Finished creating pore mask")
+    
+    #overlay image
+    overlay_mask = createOverlayImage(original, pore_mask, mask)
+    overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+    cv2.imwrite(os.path.join(overlay_imgDir, img), overlay_mask)
+    
+    
+    print("Calculating porosity")
+    return image_names, calculatePorosity(mask, pore_mask, crop_coord)
+
+def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, rows, cols):
+    crop_coord = None
+    image_names = [] 
+    
+    original = cv2.imread(rootDir + "\\" + img)
+    gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    
+    
+    crop_coord = gridSplit(original, rows, cols)
+    
+    for i in range(len(crop_coord)):
+        image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
+    
+    # create general Mask
+    #TODO: change to use variable
+    mask = getSegmentMask(original, True, crop_coord)
+    cv2.imwrite(maskDir + "\\" + img, mask)    
         
-        
-df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
-df.to_excel(rootDir + "\\" + " Porosity.xlsx")
+    # SELECT HOW PORE MASK WILL BE PRODUCED
+    print("Creating pore mask")
+    pore_mask = getPoreMask(setting, gray, mask)
+    
+    # save pore mask
+    cv2.imwrite(pore_maskDir  + "\\" + img, pore_mask)
+    print("Finished creating pore mask")
+    
+    #overlay image
+    overlay_mask = createOverlayImage(original, pore_mask, mask)
+    overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+    cv2.imwrite(os.path.join(overlay_imgDir, img), overlay_mask)
+    
+    
+    print("Calculating porosity")
+    return image_names, calculatePorosity(mask, pore_mask, crop_coord)
+
+
+
+def saveToExcel(porosity_data, names, rootDir):
+    df = pd.DataFrame(data=list(porosity_data), columns=['Porosity'], index=names)
+    df.to_excel(rootDir + "\\" + " Porosity.xlsx")
+    
+#=============================MAIN========================================
+# rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
+# acceptedFileTypes = ["png", "jpeg", "tif"]
+
+
+# maskDir =  createDir(rootDir, "Segment Mask")
+# pore_maskDir = createDir(rootDir, "Pore_Mask")
+# overlay_imgDir = createDir(rootDir, "Overlay")
+
+# for image_name in os.listdir(rootDir):
+#     crop_coord = None
+#     if image_name.split(".")[-1] in acceptedFileTypes:
+#         # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,"Binary", 5,2)
+#         n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,"Otsu")
+
+
