@@ -11,33 +11,35 @@ class App(ctk.CTk):
         self.title("Quick Preview")
         self.geometry('830x600')
         
+        #init params
         self.init_params()
+        self.image_output = None
         
         #layout
-        self.rowconfigure((0,1), weight=1, uniform='a')
+        self.rowconfigure((0,1,2,3), weight=1, uniform='a')
         self.columnconfigure(0, weight=1, uniform='a')
         self.columnconfigure(1, weight=2, uniform='a')
-        self.columnconfigure(2, weight=2, uniform='a')
         
         self.Import_Button_Image = ctk.CTkButton(self, text="Import Image", command=self.import_image)
-        self.Import_Button_Image.grid(row=0,column=0, padx=5, pady=5)
+        self.Import_Button_Image.grid(row=0,column=1, padx=5, pady=5)
         
         self.Import_Button_Folder = ctk.CTkButton(self, text="Import Directory", command=self.import_dir)
-        self.Import_Button_Folder.grid(row=0,column=1, padx=5, pady=5)
+        self.Import_Button_Folder.grid(row=1,column=1, padx=5, pady=5)
         
         self.menuPanel = MenuPanel(self, self.start_vars)
-        self.menuPanel.grid(row=0,column=2, padx=5, pady=5)
+        self.menuPanel.grid(row=2,column=1, padx=5, pady=5)
         
         self.applyButton = ctk.CTkButton(self, text="Process", command=self.analyzePorosity)
-        self.applyButton.grid(row=1, column=0)
+        self.applyButton.grid(row=3, column=1, columnspan=2)
         
         self.mainloop()
         
     
     def import_image(self):
-        
         self.path = filedialog.askopenfile().name
-        print("Importing Image, " ,self.path)
+        print("Importing Image, ",self.path)
+                        
+    
     
     
     
@@ -105,8 +107,7 @@ class ManualFrame(ctk.CTkFrame):
         
         self.options = ctk.CTkOptionMenu(self, values=["Otsu", "Binary"], variable=param["Thresh"])
         self.options.pack()
-        
-    
+
         
         
 App()
