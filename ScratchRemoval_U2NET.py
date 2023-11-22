@@ -283,7 +283,7 @@ def gridSplit(img, rows, cols):
     return crop_coord
 
 
-def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, use_same_ROI=None):
+def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, use_same_ROI=None):
     crop_coord = None
     image_names = [] 
     
@@ -315,7 +315,7 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, use_same_R
         
     # SELECT HOW PORE MASK WILL BE PRODUCED
     print("Creating pore mask")
-    pore_mask = getPoreMask('Otsu',gray, mask)
+    pore_mask = getPoreMask(setting, gray, mask)
     
     # save pore mask
     cv2.imwrite(pore_maskDir  + "\\" + img, pore_mask)

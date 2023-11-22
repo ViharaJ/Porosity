@@ -17,7 +17,7 @@ class App(ctk.CTk):
         self.init_params()
         
         #layout
-        self.rowconfigure((0,1,2,3), weight=1, uniform='a')
+        self.rowconfigure((0,1,2), weight=1, uniform='a')
         self.columnconfigure(0, weight=1, uniform='a')
         self.columnconfigure(1, weight=2, uniform='a')
     
@@ -57,18 +57,17 @@ class App(ctk.CTk):
             "Thresh": ctk.StringVar(value="Otsu"),
             }
         
+        self.all_names = []
+        self.Porosity = []
             
     def analyzePorosity(self):
         print("successfully called")
         analysisType = self.menuPanel.get()
         
-        self.all_names = []
-        self.Porosity = []
-        
         for img in self.image_names:
             print("Processing: ", img)
             n, r = S2U.processImage(img,self.path, self.maskDir, self.pore_maskDir,
-                             self.overlay_imgDir)
+                             self.overlay_imgDir, self.start_vars["Thresh"].get())
             
             self.all_names.extend(n)
             self.Porosity.extend(r)
@@ -84,11 +83,11 @@ class MenuPanel(ctk.CTkTabview):
         
         #Tabs
         self.add("Manual")
-        # self.add("Grid Split")
+        self.add("Grid Split")
         
         #Frames for the tabs
-        # GridSplitFrame(self.tab("Grid Split"), []).pack()
         ManualFrame(self.tab("Manual"), param).pack()
+        GridSplitFrame(self.tab("Grid Split"), param).pack()
         
         
         
@@ -111,7 +110,7 @@ class ManualFrame(ctk.CTkFrame):
     def __init__(self, parent, param):
         super().__init__(parent)
         
-        self.options = ctk.CTkOptionMenu(self, values=["Otsu", "Binary"], variable=param["Thresh"])
+        self.options = ctk.CTkOptionMenu(self, values=["Otsu", "Binary", "Manual"], variable=param["Thresh"])
         self.options.pack()
 
         
