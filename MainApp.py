@@ -13,15 +13,18 @@ class App(ctk.CTk):
         
         self.init_params()
         
-        self.menuPanel = MenuPanel(self, self.start_vars)
-        self.menuPanel.pack()
+        self.Import_Button = ctk.CTkButton(self.buttonPanel, text="Import Image", command=self.import_image)
+        self.Import_Button.grid(row=0,column=0, padx=5, pady=5)
         
-        self.process_button = ctk.CTkButton(self, text="Apply", command=self.analyzePorosity)
-        self.process_button.pack()
         
         self.mainloop()
     
+    def import_image(self):
+        
+        self.path = filedialog.askopenfile().name
+        print("Importing Image, " ,self.path)
     
+                
     def init_params(self):
         self.start_vars = {
             "Rows": ctk.IntVar(value=0),
