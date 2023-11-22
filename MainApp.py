@@ -4,6 +4,8 @@ import cv2
 from PIL import Image, ImageTk
 import numpy as np
 import os
+import ScratchRemoval_U2NET as S2U
+
 
 class App(ctk.CTk):
     def __init__(self):
@@ -13,46 +15,39 @@ class App(ctk.CTk):
         
         #init params
         self.init_params()
-        self.image_output = None
         
         #layout
         self.rowconfigure((0,1,2,3), weight=1, uniform='a')
         self.columnconfigure(0, weight=1, uniform='a')
         self.columnconfigure(1, weight=2, uniform='a')
-        
-        self.Import_Button_Image = ctk.CTkButton(self, text="Import Image", command=self.import_image)
-        self.Import_Button_Image.grid(row=0,column=1, padx=5, pady=5)
-        
+    
         self.Import_Button_Folder = ctk.CTkButton(self, text="Import Directory", command=self.import_dir)
-        self.Import_Button_Folder.grid(row=1,column=1, padx=5, pady=5)
+        self.Import_Button_Folder.grid(row=0,column=1, padx=5, pady=5)
         
         self.menuPanel = MenuPanel(self, self.start_vars)
-        self.menuPanel.grid(row=2,column=1, padx=5, pady=5)
+        self.menuPanel.grid(row=1,column=1, padx=5, pady=5)
         
         self.applyButton = ctk.CTkButton(self, text="Process", command=self.analyzePorosity)
-        self.applyButton.grid(row=3, column=1, columnspan=2)
+        self.applyButton.grid(row=2, column=1, columnspan=2)
         
         self.mainloop()
         
-    
-    def import_image(self):
-        self.path = filedialog.askopenfile().name
-        print("Importing Image, ",self.path)
-                        
-    
     
     
     
     def import_dir(self):
         self.path = filedialog.askdirectory()
-        self.images = []
+        self.maskDir = S2U.createDir(self.path, "Segment Mask")
+        self.pore_maskDir = S2U.createDir(self.path, "Pore_Mask")
+        self. overlay_imgDir = S2U.createDir(self.path, "Overlay")
+        self.image_names = []
         acceptedFileTypes = acceptedFileTypes = ["png", "jpeg", "tif"]
         
         for file in os.listdir(self.path):
             if file.split(".")[-1] in acceptedFileTypes:
-                self.images.append(cv2.imread(os.path.join(self.path, file)))
+                self.image_names.append(file)
                 
-        print(len(self.images))        
+           
 
             
     def init_params(self):
@@ -65,7 +60,18 @@ class App(ctk.CTk):
             
     def analyzePorosity(self):
         print("successfully called")
-        type = self.menuPanel.get()
+        analysisType = self.menuPanel.get()
+        
+        self.all_names = []
+        self.Porosity = []
+        
+        for img in self.image_names:
+            print("Processing: ", img)
+            n, r = S2U.processImage(img,self.path, self.maskDir, self.pore_maskDir,
+                             self.overlay_imgDir)
+            
+            self.all_names.extend(n)
+            self.Porosity.extent(r)
         
         pass
         

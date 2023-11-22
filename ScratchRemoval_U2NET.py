@@ -109,7 +109,7 @@ def createDir(root, folderName):
     return newPath
 
 
-def getPoreMask(option, path = None):
+def getPoreMask(option, gray, mask, path = None):
     
     '''
     option is a string, acceptable inputs are: Otsu, Bin, Manual
@@ -149,7 +149,7 @@ def createOverlayImage(img, pore_m, mask):
     mask[bgx, bgy,:] = [0,255,0]
  
     # overal mask onto original
-    added_image = cv2.addWeighted(original,0.4,mask,0.3,0)
+    added_image = cv2.addWeighted(img,0.4,mask,0.3,0)
     
     return added_image
 
@@ -193,7 +193,7 @@ def labelImage(image, coordinates):
     
     return image
 
-def getSegmentMask(img, crop_coord=None):
+def getSegmentMask(img, createMaskDir=False, crop_coord=None, fullPath=None):
     """
     img: original image array
     crop_coord: optional
@@ -201,13 +201,13 @@ def getSegmentMask(img, crop_coord=None):
     """
     mask = None
     if createMaskDir:             
-        mask = getRemBGMask(original)
+        mask = getRemBGMask(img)
     else:
-        mask =  cv2.imread(maskDir + "\\" + image_name, cv2.IMREAD_GRAYSCALE)
+        mask =  cv2.imread(fullPath, cv2.IMREAD_GRAYSCALE)
         
     if crop_coord is not None:
         # Create cropped mask if necessary
-        blackCanvas = np.full(shape=gray.shape, fill_value=0, dtype=np.uint8)
+        blackCanvas = np.full(shape=(img.shape[0], img.shape[1]), fill_value=0, dtype=np.uint8)
             
         for j in range(len(crop_coord)):   
             each_crop = crop_coord[j]
@@ -280,74 +280,120 @@ def gridSplit(img, rows, cols):
     
     return crop_coord
 
-#=============================MAIN========================================
-rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
-acceptedFileTypes = ["png", "jpeg", "tif"]
 
-# CHANGE VARIABLES BELOW ACOORDING TO USE
-createMaskDir = True 
-maskDir =  createDir(rootDir, "Segment Mask")
-pore_maskDir = createDir(rootDir, "Pore_Mask")
-
-
-overlay_imgDir = createDir(rootDir, "Overlay")
-image_names = []
-Porosity = []
-use_same_ROI = False
-crop_coord = None
-
-for image_name in os.listdir(rootDir):
+def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, use_same_ROI=None):
     crop_coord = None
-    if image_name.split(".")[-1] in acceptedFileTypes:
-        print("Processing ", image_name)
-        original = cv2.imread(rootDir + "\\" + image_name)
-        gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    image_names = [] 
+    
+    original = cv2.imread(rootDir + "\\" + img)
+
+    # get crop coordinates, 
+    # Controls: use space or enter to finish current selection 
+    # and start a new one, use esc to terminate multiple ROI selection process.
+    if not use_same_ROI:
+        crop_coord = createROI(original)
+        user_val = input("Use same ROI (Y)?")
+        
+        if user_val.lower() == "y":
+            use_same_ROI = True
+
+    #Update name list:
+    if (len(crop_coord) == 0):
+        image_names.append(img)
+    else:
+        for i in range(len(crop_coord)):
+            image_names.append(img.split('.')[0] + "_ROI_" + str(i + 1))
+            
+    
+    # create general Mask
+    mask = getSegmentMask(original, crop_coord)
+    cv2.imwrite(maskDir + "\\" + img, mask)    
+        
+    # SELECT HOW PORE MASK WILL BE PRODUCED
+    print("Creating pore mask")
+    pore_mask = getPoreMask('Otsu')
+    
+    # save pore mask
+    cv2.imwrite(pore_maskDir  + "\\" + img, pore_mask)
+    print("Finished creating pore mask")
+    
+    #overlay image
+    overlay_mask = createOverlayImage(original, pore_mask, mask)
+    overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+    cv2.imwrite(os.path.join(overlay_imgDir, img), overlay_mask)
+    
+    
+    print("Calculating porosity")
+    return image_names, calculatePorosity(mask, pore_mask, crop_coord)
+    
+#=============================MAIN========================================
+# rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
+# acceptedFileTypes = ["png", "jpeg", "tif"]
+
+# # CHANGE VARIABLES BELOW ACOORDING TO USE
+# createMaskDir = True 
+# maskDir =  createDir(rootDir, "Segment Mask")
+# pore_maskDir = createDir(rootDir, "Pore_Mask")
+
+
+# overlay_imgDir = createDir(rootDir, "Overlay")
+# image_names = []
+# Porosity = []
+# use_same_ROI = False
+# crop_coord = None
+
+# for image_name in os.listdir(rootDir):
+#     crop_coord = None
+#     if image_name.split(".")[-1] in acceptedFileTypes:
+#         print("Processing ", image_name)
+#         original = cv2.imread(rootDir + "\\" + image_name)
+#         gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
 
         
-        # get crop coordinates, 
-        # Controls: use space or enter to finish current selection 
-        # and start a new one, use esc to terminate multiple ROI selection process.
-        if not use_same_ROI:
-            crop_coord = createROI(original)
-            user_val = input("Use same ROI (Y)?")
+#         # get crop coordinates, 
+#         # Controls: use space or enter to finish current selection 
+#         # and start a new one, use esc to terminate multiple ROI selection process.
+#         if not use_same_ROI:
+#             crop_coord = createROI(original)
+#             user_val = input("Use same ROI (Y)?")
             
-            if user_val.lower() == "y":
-                use_same_ROI = True
+#             if user_val.lower() == "y":
+#                 use_same_ROI = True
         
-        #TODO: REMOVE AFTER TESTING
-        crop_coord = gridSplit(original, 3, 4)
-        print(crop_coord)
+#         #TODO: REMOVE AFTER TESTING
+#         crop_coord = gridSplit(original, 3, 4)
+#         print(crop_coord)
     
-        #Update name list:
-        if (len(crop_coord) == 0):
-            image_names.append(image_name)
-        else:
-            for i in range(len(crop_coord)):
-                image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
+#         #Update name list:
+#         if (len(crop_coord) == 0):
+#             image_names.append(image_name)
+#         else:
+#             for i in range(len(crop_coord)):
+#                 image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
                 
         
-        # create general Mask
-        mask = getSegmentMask(original, crop_coord)
-        cv2.imwrite(maskDir + "\\" + image_name, mask)    
+#         # create general Mask
+#         mask = getSegmentMask(original, crop_coord)
+#         cv2.imwrite(maskDir + "\\" + image_name, mask)    
             
-        # SELECT HOW PORE MASK WILL BE PRODUCED
-        print("Creating pore mask")
-        pore_mask = getPoreMask('Otsu')
+#         # SELECT HOW PORE MASK WILL BE PRODUCED
+#         print("Creating pore mask")
+#         pore_mask = getPoreMask('Otsu')
         
-        # save pore mask
-        cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
-        print("Finished creating pore mask")
+#         # save pore mask
+#         cv2.imwrite(pore_maskDir  + "\\" + image_name, pore_mask)
+#         print("Finished creating pore mask")
         
-        #overlay image
-        overlay_mask = createOverlayImage(original, pore_mask, mask)
-        overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
-        cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
+#         #overlay image
+#         overlay_mask = createOverlayImage(original, pore_mask, mask)
+#         overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
+#         cv2.imwrite(os.path.join(overlay_imgDir, image_name), overlay_mask)
         
         
-        print("Calculating porosity")
-        Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
+#         print("Calculating porosity")
+#         Porosity.extend(calculatePorosity(mask, pore_mask, crop_coord))
     
         
         
-df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
-df.to_excel(rootDir + "\\" + " Porosity.xlsx")
+# df = pd.DataFrame(data=list(Porosity), columns=['Porosity'], index=image_names)
+# df.to_excel(rootDir + "\\" + " Porosity.xlsx")
