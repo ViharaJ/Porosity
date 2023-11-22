@@ -113,6 +113,8 @@ def getPoreMask(option, gray, mask, path = None):
     
     '''
     option is a string, acceptable inputs are: Otsu, Bin, Manual
+    gray: gray scale image,
+    mask: black and white mask,
     returns: white background with black pores mask
     '''
     pore_mask = None
@@ -167,10 +169,10 @@ def createROI(image, shrink_rate = 0.25):
     cv2.destroyAllWindows()
     r = np.array(r)
     
-    # remove any empty ROIS
-    for i in range(len(r)):
-        if not np.any(r[i]):
-           del r[i]
+    # # remove any empty ROIS
+    # for i in range(len(r)):
+    #     if not np.any(r[i]):
+    #        del r[i]
          
     # resize coordinates to make original dimensions 
     r = (r*(1/shrink_rate)).astype(int)
@@ -193,7 +195,7 @@ def labelImage(image, coordinates):
     
     return image
 
-def getSegmentMask(img, createMaskDir=False, crop_coord=None, fullPath=None):
+def getSegmentMask(img, createMaskDir=True, crop_coord=None, fullPath=None):
     """
     img: original image array
     crop_coord: optional
@@ -228,7 +230,7 @@ def calculatePorosity(m, p_m, crop_coords=None):
     """
     porosity = []
     
-    if crop_coord is None:
+    if crop_coords is None:
         bg = cv2.countNonZero(m)
         p = cv2.countNonZero(cv2.bitwise_not(p_m))
         
@@ -286,7 +288,8 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, use_same_R
     image_names = [] 
     
     original = cv2.imread(rootDir + "\\" + img)
-
+    gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    
     # get crop coordinates, 
     # Controls: use space or enter to finish current selection 
     # and start a new one, use esc to terminate multiple ROI selection process.
@@ -306,12 +309,13 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, use_same_R
             
     
     # create general Mask
-    mask = getSegmentMask(original, crop_coord)
+    #TODO: change to use variable
+    mask = getSegmentMask(original, True, crop_coord)
     cv2.imwrite(maskDir + "\\" + img, mask)    
         
     # SELECT HOW PORE MASK WILL BE PRODUCED
     print("Creating pore mask")
-    pore_mask = getPoreMask('Otsu')
+    pore_mask = getPoreMask('Otsu',gray, mask)
     
     # save pore mask
     cv2.imwrite(pore_maskDir  + "\\" + img, pore_mask)

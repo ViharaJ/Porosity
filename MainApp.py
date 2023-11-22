@@ -71,9 +71,9 @@ class App(ctk.CTk):
                              self.overlay_imgDir)
             
             self.all_names.extend(n)
-            self.Porosity.extent(r)
+            self.Porosity.extend(r)
         
-        pass
+        
         
 
 
