@@ -335,6 +335,7 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, u
     print("Calculating porosity")
     return image_names, calculatePorosity(mask, pore_mask, crop_coord)
 
+
 def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, rows, cols):
     '''
     img: image name
@@ -358,7 +359,7 @@ def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, s
     #TODO: change to use variable
     mask = getSegmentMask(original, True, crop_coord)
     cv2.imwrite(maskDir + "\\" + img, mask)    
-        
+
     # SELECT HOW PORE MASK WILL BE PRODUCED
     print("Creating pore mask")
     pore_mask = getPoreMask(setting, gray, mask)
