@@ -4,15 +4,20 @@ Calculate porosity of opaque pores. Can select multiple ROI per image
 For ROI selection: use space or enter to finish current selection 
     and start a new one, use esc to terminate multiple ROI selection process.
 
+
+
 How to use: 
     1. Install rembg if you don't have it already: https://github.com/danielgatis/rembg
-    2. Change rootDir to your image path and then run 
+    2. Change rootDir to your image path
+    3. Run
+    
+    
     
 Options: 
     For mask to segement regolith mask from background
         1. REMBG mask
         2. use a pre-existing mask path. (Indicate directory below)
-    If using option 2, set createMaskDir to False
+    If using Option 2, set createMaskDir to False
     
     
     For pore mask:
@@ -331,6 +336,12 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, u
     return image_names, calculatePorosity(mask, pore_mask, crop_coord)
 
 def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, rows, cols):
+    '''
+    img: image name
+    rootDir: directory of the images 
+    setting: options are Bin, Otsu or Manual. Used for getting pore mask
+    returns: list of ROI labels, and list of porosity
+    '''
     crop_coord = None
     image_names = [] 
     
@@ -341,7 +352,7 @@ def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, s
     crop_coord = gridSplit(original, rows, cols)
     
     for i in range(len(crop_coord)):
-        image_names.append(image_name.split('.')[0] + "_ROI_" + str(i + 1))
+        image_names.append(img.split('.')[0] + "_ROI_" + str(i + 1))
     
     # create general Mask
     #TODO: change to use variable
