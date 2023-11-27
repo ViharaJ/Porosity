@@ -27,7 +27,7 @@ class App(ctk.CTk):
         self.menuPanel = MenuPanel(self, self.start_vars)
         self.menuPanel.grid(row=1,column=1, padx=5, pady=5)
         
-        self.applyButton = ctk.CTkButton(self, text="Process", command=self.analyzePorosity)
+        self.applyButton = ctk.CTkButton(self, text="Process", command=self.gridSplit)
         self.applyButton.grid(row=2, column=1, columnspan=2)
         
         self.mainloop()
@@ -52,8 +52,8 @@ class App(ctk.CTk):
             
     def init_params(self):
         self.start_vars = {
-            "Rows": ctk.IntVar(value=0),
-            "Columns": ctk.IntVar(value=0),
+            "Rows": ctk.IntVar(value=1),
+            "Columns": ctk.IntVar(value=1),
             "Thresh": ctk.StringVar(value="Otsu"),
             }
         
@@ -71,10 +71,21 @@ class App(ctk.CTk):
             
             self.all_names.extend(n)
             self.Porosity.extend(r)
+            
+            
+    def gridSplit(self):
+        print("Processing using Grid Split")
         
+        #SAFEGUARD
+        r = self.start_vars['Rows'].get()
+        c = self.start_vars['Columns'].get()
         
+        print(r,c)
         
-
+        for img in self.image_names:            
+            n,r = S2U.processImageGridSplit(img,  self.path,  self.maskDir, 
+                                     self.pore_maskDir,  self.overlay_imgDir,
+                                     "Otsu", r,c)
 
 
 class MenuPanel(ctk.CTkTabview):
@@ -97,12 +108,12 @@ class GridSplitFrame(ctk.CTkFrame):
         
         self.e1 = ctk.CTkLabel(self, text="Rows")
         self.e1.pack()
-        self.rows = ctk.CTkEntry(self)
+        self.rows = ctk.CTkEntry(self, textvariable=params["Rows"])
         self.rows.pack(pady=5, padx=5, expand=True, fill='x')
         
         self.e2 = ctk.CTkLabel(self, text="Columns")
         self.e2.pack()
-        self.cols = ctk.CTkEntry(self)
+        self.cols = ctk.CTkEntry(self, textvariable=params["Columns"])
         self.cols.pack(pady=5, padx=5, expand=True, fill='x')
         
         

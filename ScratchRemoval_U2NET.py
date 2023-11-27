@@ -212,7 +212,7 @@ def getSegmentMask(img, createMaskDir=True, crop_coord=None, fullPath=None):
     else:
         mask =  cv2.imread(fullPath, cv2.IMREAD_GRAYSCALE)
         
-    if len(crop_coord) > 0:
+    if crop_coord is not None and len(crop_coord) > 0:
         # Create cropped mask if necessary
         blackCanvas = np.full(shape=(img.shape[0], img.shape[1]), fill_value=0, dtype=np.uint8)
             
