@@ -12,5 +12,6 @@
 
 #### Menu Panel 
 1. Add assertions for IntVar variables
+2. https://stackoverflow.com/questions/4140437/interactively-validating-entry-widget-content-in-tkinter
 
 #### Menu Panel 
