@@ -338,6 +338,7 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, u
 
 def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, rows, cols):
     '''
+    **Also write images to correct directories**
     img: image name
     rootDir: directory of the images 
     setting: options are Bin, Otsu or Manual. Used for getting pore mask

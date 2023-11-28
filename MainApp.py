@@ -22,25 +22,34 @@ class App(ctk.CTk):
         self.columnconfigure(0, weight=1, uniform='a')
         self.columnconfigure(1, weight=2, uniform='a')
     
-        self.Import_Button_Folder = ctk.CTkButton(self, text="Import Directory", command=self.import_dir)
-        self.Import_Button_Folder.grid(row=0,column=1, padx=5, pady=5)
+        self.importPanel()
         
         self.menuPanel = MenuPanel(self, self.start_vars)
         self.menuPanel.grid(row=1,column=1, padx=5, pady=5)
         
-        self.applyButton = ctk.CTkButton(self, text="Process", command=self.gridSplit)
+        self.applyButton = ctk.CTkButton(self, text="Process", command=self.processImages)
         self.applyButton.grid(row=2, column=1, columnspan=2)
         
         self.mainloop()
         
     
+    def processImages(self):
+        self.maskDir = S2U.createDir(self.start_vars["dir"].get(), "Segment Mask")
+        self.pore_maskDir = S2U.createDir(self.start_vars["dir"].get(), "Pore_Mask")
+        self. overlay_imgDir = S2U.createDir(self.start_vars["dir"].get(), "Overlay")
+        
+        analysisType = self.menuPanel.get()
+        
+        if analysisType == "Manual":
+            self.analyzePorosity()
+        else: self.gridSplit()
+        
     
     
     def import_dir(self):
         self.path = filedialog.askdirectory()
-        self.maskDir = S2U.createDir(self.path, "Segment Mask")
-        self.pore_maskDir = S2U.createDir(self.path, "Pore_Mask")
-        self. overlay_imgDir = S2U.createDir(self.path, "Overlay")
+        
+        self.start_vars["dir"].set(self.path)
         self.image_names = []
         acceptedFileTypes = ["png", "jpeg", "tif"]
         
@@ -52,7 +61,7 @@ class App(ctk.CTk):
                 
            
     def import_image(self):
-        self.original = cv2.imread(os.path.join(self.path, self.image_names[0]))   
+        self.original = cv2.imread(os.path.join(self.start_vars["dir"].get(), self.image_names[0]))   
         self.preview = self.original.copy()
         self.image_ratio = self.original.shape[1]/self.original.shape[0]
         
@@ -100,6 +109,7 @@ class App(ctk.CTk):
             
     def init_params(self):
         self.start_vars = {
+            "dir": ctk.StringVar(value=""),
             "Rows": ctk.IntVar(value=1),
             "Columns": ctk.IntVar(value=1),
             "Thresh": ctk.StringVar(value="Otsu"),
@@ -107,11 +117,20 @@ class App(ctk.CTk):
         
         self.all_names = []
         self.Porosity = []
-            
+    
+    def importPanel(self):
+        self.f1 = ctk.CTkFrame(self)
+        
+        self.Import_Button_Folder = ctk.CTkButton(self.f1, text="Import Directory", command=self.import_dir)
+        self.import_e = ctk.CTkEntry(self.f1, textvariable=self.start_vars["dir"])
+        
+        self.import_e.pack()
+        self.Import_Button_Folder.pack()
+        
+        self.f1.grid(row=0,column=1, padx=5, pady=5)
         
     def analyzePorosity(self):
         print("successfully called")
-        analysisType = self.menuPanel.get()
         
         for img in self.image_names:
             print("Processing: ", img)
@@ -143,6 +162,8 @@ class App(ctk.CTk):
         self.canvas_height = event.height 
         self.updatePreview_Image()
 
+
+#===========================PANELS===================
 
 class MenuPanel(ctk.CTkTabview):
     def __init__(self, parent, param):
@@ -180,9 +201,7 @@ class GridSplitFrame(ctk.CTkFrame):
         self.e2.pack()
         self.cols = ctk.CTkEntry(self, textvariable=params["Columns"])
         self.cols.pack(pady=5, padx=5, expand=True, fill='x')
-        
-    
-        
+             
         
 class ManualFrame(ctk.CTkFrame):
     def __init__(self, parent, param):
