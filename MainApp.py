@@ -11,10 +11,11 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Quick Preview")
-        self.geometry('830x600')
+        self.geometry('600x830')
         
         #init params
         self.init_params()
+        self.image_output = None
         
         #layout
         self.rowconfigure((0,1,2), weight=1, uniform='a')
@@ -41,14 +42,61 @@ class App(ctk.CTk):
         self.pore_maskDir = S2U.createDir(self.path, "Pore_Mask")
         self. overlay_imgDir = S2U.createDir(self.path, "Overlay")
         self.image_names = []
-        acceptedFileTypes = acceptedFileTypes = ["png", "jpeg", "tif"]
+        acceptedFileTypes = ["png", "jpeg", "tif"]
         
         for file in os.listdir(self.path):
             if file.split(".")[-1] in acceptedFileTypes:
                 self.image_names.append(file)
+        
+        self.import_image()
                 
            
-
+    def import_image(self):
+        self.original = cv2.imread(os.path.join(self.path, self.image_names[0]))   
+        self.preview = self.original.copy()
+        self.image_ratio = self.original.shape[1]/self.original.shape[0]
+        
+        self.changeImageOutput()
+    
+    
+    def changeImageOutput(self):
+        if self.image_output is None:
+            #Canvas
+            self.image_output = ImageOutput(self, self.resize_image)
+            self.image_output.grid(row=0, column=0, rowspan=3, sticky = 'nsew')
+            self.canvas_width = self.image_output.winfo_reqwidth()
+            self.canvas_height = self.image_output.winfo_reqheight()
+        elif self.image_output:
+            self.image_output.delete("all")
+            print("Removed old image")
+            self.updatePreview_Image()
+            print("inserting new image")
+        
+        self.updatePreview_Image()
+        
+        
+    def updatePreview_Image(self):
+       #get new dimensions
+       canvas_ratio =  self.canvas_width / self.canvas_height
+       if canvas_ratio > self.image_ratio: #canvas wider than image
+           im_height = self.canvas_height
+           im_width = im_height * self.image_ratio
+       else:                               #canvas narrower than image
+           im_width = self.canvas_width
+           im_height = im_width / self.image_ratio
+       
+       #update image
+       self.preview_img = Image.fromarray(self.preview).resize((int(im_width), int(im_height)))
+       self.drawImage()
+       
+        
+    def drawImage(self):
+        #update preview_tk and place
+        self.preview_tk = ImageTk.PhotoImage(self.preview_img)
+        self.image_output.create_image(int(self.canvas_width/2), 
+                                       int(self.canvas_height/2),
+                                       anchor="center",
+                                       image = self.preview_tk)    
             
     def init_params(self):
         self.start_vars = {
@@ -60,6 +108,7 @@ class App(ctk.CTk):
         self.all_names = []
         self.Porosity = []
             
+        
     def analyzePorosity(self):
         print("successfully called")
         analysisType = self.menuPanel.get()
@@ -86,6 +135,13 @@ class App(ctk.CTk):
             n,r = S2U.processImageGridSplit(img,  self.path,  self.maskDir, 
                                      self.pore_maskDir,  self.overlay_imgDir,
                                      "Otsu", r,c)
+            
+            
+    def resize_image(self, event):
+        self.image_output.delete("all")
+        self.canvas_width = event.width 
+        self.canvas_height = event.height 
+        self.updatePreview_Image()
 
 
 class MenuPanel(ctk.CTkTabview):
@@ -98,13 +154,22 @@ class MenuPanel(ctk.CTkTabview):
         
         #Frames for the tabs
         ManualFrame(self.tab("Manual"), param).pack()
-        GridSplitFrame(self.tab("Grid Split"), param).pack()
+        GridSplitFrame(self.tab("Grid Split"), param, self.checkIfInt).pack()
+        
+    
+    def checkIfInt(self, p):
+        if str.isdigit(p):
+            return True
+        else: return False
         
         
         
 class GridSplitFrame(ctk.CTkFrame):
-    def __init__(self, parent, params):
+    def __init__(self, parent, params, cback):
         super().__init__(parent)
+        
+        self.options = ctk.CTkOptionMenu(self, values=["Otsu", "Binary", "Manual"], variable=params["Thresh"])
+        self.options.pack()
         
         self.e1 = ctk.CTkLabel(self, text="Rows")
         self.e1.pack()
@@ -116,6 +181,8 @@ class GridSplitFrame(ctk.CTkFrame):
         self.cols = ctk.CTkEntry(self, textvariable=params["Columns"])
         self.cols.pack(pady=5, padx=5, expand=True, fill='x')
         
+    
+        
         
 class ManualFrame(ctk.CTkFrame):
     def __init__(self, parent, param):
@@ -124,6 +191,11 @@ class ManualFrame(ctk.CTkFrame):
         self.options = ctk.CTkOptionMenu(self, values=["Otsu", "Binary", "Manual"], variable=param["Thresh"])
         self.options.pack()
 
+
+class ImageOutput(Canvas):
+    def __init__(self, parent, resize_func):
+        super().__init__(parent, background='white')
+        self.bind("<Configure>", lambda e: resize_func(e))
         
         
 App()
