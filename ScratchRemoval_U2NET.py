@@ -1,29 +1,34 @@
 '''
-Calculate porosity of opaque pores. Can select multiple ROI per image
+Calculates porosity of opaque pores. You can either select no ROI, select 
+multiple ROIs or use a grid split. 
 
 For ROI selection: use space or enter to finish current selection 
-    and start a new one, use esc to terminate multiple ROI selection process.
+and start a new one, use esc to terminate multiple ROI selection process.
 
 
 
 How to use: 
     1. Install rembg if you don't have it already: https://github.com/danielgatis/rembg
     2. Change rootDir to your image path
-    3. Run
+    3. Change thresh_type to the thresh holding type to be used to generate the pore mask
+    4. Run
     
     
     
-Options: 
-    For mask to segement regolith mask from background
-        1. REMBG mask
+Changeable Options: 
+    For the mask to segement the regolith from background. 
+    
+    You can either use a: 
+        1. REMBG mask (created in script)
         2. use a pre-existing mask path. (Indicate directory below)
-    If using Option 2, set createMaskDir to False
+    Change the boolean variable createMask accordingly
     
     
-    For pore mask:
+    For the pore mask you can:
         1. create a binarized mask
         2. create a mask from uisng otsu threshholding
         3. use a pre-existing directory (Indicate directory below)
+    Change the variable thresh_type to one of the following options: Otsu, Binary, Manual
     
 
 Procedure:
@@ -32,6 +37,8 @@ Procedure:
     3. Count black pixels 
     4. Save pore mask as white background and black pores
 '''
+
+
 import cv2 
 import os 
 import numpy as np 
@@ -385,18 +392,21 @@ def saveToExcel(porosity_data, names, rootDir):
     df.to_excel(rootDir + "\\" + " Porosity.xlsx")
     
 #=============================MAIN========================================
-# rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
-# acceptedFileTypes = ["png", "jpeg", "tif"]
+# Variables you can adjust
+rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
+createMask = True
+thresh_type = "Otsu"
 
 
-# maskDir =  createDir(rootDir, "Segment Mask")
-# pore_maskDir = createDir(rootDir, "Pore_Mask")
-# overlay_imgDir = createDir(rootDir, "Overlay")
+acceptedFileTypes = ["png", "jpeg", "tif"]
+maskDir =  createDir(rootDir, "Segment Mask")
+pore_maskDir = createDir(rootDir, "Pore_Mask")
+overlay_imgDir = createDir(rootDir, "Overlay")
 
-# for image_name in os.listdir(rootDir):
-#     crop_coord = None
-#     if image_name.split(".")[-1] in acceptedFileTypes:
-#         # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,"Binary", 5,2)
-#         n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,"Otsu")
+for image_name in os.listdir(rootDir):
+    crop_coord = None
+    if image_name.split(".")[-1] in acceptedFileTypes:
+        # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 5,2)
+        n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
 
 
