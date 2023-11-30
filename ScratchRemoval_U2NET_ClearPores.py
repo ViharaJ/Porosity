@@ -1,9 +1,52 @@
 """
-Procedure:
-    1. REMBG remove background
-    2. Get pore mask 
-    
+Calculates porosity of regolith samples with clear pores. Results are placed 
+into an excel file in the directory containing the images. 
+Muliple folders are created. 
 
+Full Process: 
+    Part 1.
+        1. Load your image 
+        2. Use a mask to segment regoligth from the background 
+        3. Extract a mask for the black pores 
+        4. Regolith - Black pores = Regolith + Clear pores (this makes sense, just think for like a min)
+        5. Get the average colour of (Regolith + Clear pore)
+        6. Paint the black pores in this color
+        7. Multiply the mask for segmenting with the image from Step 6. 
+        8. Switch to ImageJ/Fiji 
+        
+    Part 2 (In ImageJ/Fiji): 
+        1. Open Image(s)
+        2. Threshold and set bounds to extract clear Pores
+        3. Save results (clear pore mask)
+        
+    Part 3:
+        1. Open segmenting mask 
+        2. Open pore mask and clear pore mask
+        3. Combine masks in Step 2 to create the final pore mask 
+        4. Calculate Porosity 
+        
+!!!How to use!!!: 
+    1. Install rembg if you don't have it already: https://github.com/danielgatis/rembg
+    2. Change rootDir to your images folder
+    3. Change thresh_type to the thresh holding type to be used to generate the pore mask
+    4. Run
+    
+    
+    
+Changeable Options: 
+    For the mask to segement the regolith from background. 
+    
+    You can either use a: 
+        1. REMBG mask (created in script)
+        2. use a pre-existing mask path. (Indicate directory below)
+    Change the boolean variable createMask accordingly
+    
+    
+    For the pore mask you can:
+        1. create a binarized mask
+        2. create a mask from uisng otsu threshholding
+        3. use a pre-existing directory (Indicate directory below)
+    Change the variable thresh_type to one of the following options: Otsu, Binary, Manual
 """
 import cv2 
 import os 
@@ -38,16 +81,52 @@ def postProcess(image):
     '''
     return remove(image, post_process_mask=True, session=new_session("u2net"))    
 
+def createPoreMaskBin(image, mask, low, hi):
+    '''
+    image: gray image array
+    mask: grayscale image array
+    return: black and white pore mask
+    '''
+    segmented = cv2.bitwise_and(image, mask)    
+    ret, binar = cv2.threshold(segmented, low, hi, cv2.THRESH_BINARY)
+    
+    return binar + cv2.bitwise_not(mask)
+
 def createPoreMaskOtsu(image, mask):
     '''
     image: gray image array
     mask: grayscale image array
-    return: black and white image, pores are black on white background
+    return: black and white pore mask
     '''
     segmented = cv2.bitwise_and(image, mask)    
     ret, otsu = cv2.threshold(segmented, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     return otsu + cv2.bitwise_not(mask)
+
+def getPoreMask(option, gray, mask, path = None):
+    
+    '''
+    option is a string, acceptable inputs are: Otsu, Bin, Manual
+    gray: gray scale image,
+    mask: black and white mask,
+    returns: white background with black pores mask
+    '''
+    pore_mask = None
+    if option.strip() =='Otsu':
+        pore_mask = createPoreMaskOtsu(gray, mask)
+        pore_mask_inv = cv2.bitwise_not(pore_mask)
+        pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
+        pore_mask = cv2.bitwise_not(pore_mask_inv)
+    elif option.strip() == 'Binary':
+        pore_mask = createPoreMaskBin(gray, mask, 70, 255)   
+        pore_mask_inv = cv2.bitwise_not(pore_mask)
+        pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
+        pore_mask = cv2.bitwise_not(pore_mask_inv)
+    elif option.strip() =='Manual':
+        pore_mask = cv2.imread(path)
+    else: return -1
+    
+    return pore_mask
 
 def makeBGWhite(image, mask):
     '''
@@ -175,100 +254,107 @@ def getHarrisCorners(image, a = 12, b = 5, c = 0.06, max_thresh = 0.07, dilate =
     
     return mask
 
+def saveToExcel(porosity_data, names, rootDir):
+    df = pd.DataFrame(data=list(porosity_data), columns=['Porosity'], index=names)
+    df.to_excel(rootDir + "\\" + " Porosity.xlsx")
 
 
-#=======================CLASSES==================================
-class clearPoreProcess():
-    def __init__(self, rootDir):
-        self.rootDir = rootDir
+def processPart1():
+    global inputDir, pore_maskDir, multiplyDir, harrisDir, coloredInDir,maskDir
+    for image_name in os.listdir(inputDir):
+        print("Processing ", image_name)
         
-        self.initParams()
+        # load original image
+        original = cv2.imread(inputDir + "/" + image_name)
+        gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+       
+        # masks
+        if createMask:
+            general_mask = getRemBGMask(original)  
+        else: 
+            general_mask = cv2.imread(os.path.join(maskDir, image_name), cv2.IMREAD_GRAYSCALE)
+        
+        cv2.imwrite(maskDir + "/" + image_name, general_mask)    
+        segment = colourANDMask(original, general_mask)
         
         
-    def initParams(self):
-        self.maskDir = self.createDir("General_Mask")
-        self.pore_maskDir = self.createDir("pore_mask")
-        self.allpores_maskDir = self.createDir("allpores_mask")
-        self.coloredInDir = self.createDir("coloured_in")
-        self.multiplyDir = self.createDir("multiply")
-    
-    
-    def createDir(self, folderName):
-        '''
-        creates new folder if it doesn't exist
-        returns: new folder's path
-        '''
-        newPath = os.path.join(self.rootDir, folderName)
+        pore_mask = getPoreMask(thresh_type, gray, general_mask)
         
-        if not os.path.exists(newPath):
-            os.makedirs(newPath)
-            
-        return newPath
+        #remove particles 
+        pore_mask_inv = cv2.bitwise_not(pore_mask)
+        pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
+        pore_mask = cv2.bitwise_not(pore_mask_inv)
+        cv2.imwrite(os.path.join(pore_maskDir, image_name), pore_mask)
         
-    
-    def processPart1(self):
-        for image_name in os.listdir(self.rootDir):
-            print("Processing ", image_name)
-            
-            # load original image
-            original = cv2.imread(inputDir + "/" + image_name)
-            gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
-              
-            #masks 
-            general_mask = cv2.imread(os.path.join(maskDir, image_name), cv2.IMREAD_GRAYSCALE)#getRemBGMask(original)  
-            
+        # average colour of material + clear pores
+        reg_avgColor = getAverageColour(original, general_mask, pore_mask)
+        
+        painted_in = paintInMask(segment, pore_mask, reg_avgColor)
+        cv2.imwrite(coloredInDir + "/" + image_name, painted_in)
+       
+        multiply = multiplyImages(painted_in, cv2.cvtColor(general_mask, cv2.COLOR_GRAY2BGR))           
+        multiply = cv2.cvtColor(multiply, cv2.COLOR_BGR2GRAY)
+        cv2.imwrite(multiplyDir + "/" + image_name, multiply)
+        
+        
+def processPart2():
+    global inputDir, pore_maskDir, multiplyDir, harrisDir, coloredInDir, maskDir
+                
 #=============================MAIN========================================
-# rootDir =  "C:/Users/v.jayaweera/Documents/Tim/Pororsity-ClearPores/"
-# inputDir = "C:/Users/v.jayaweera/Documents/Tim/Pororsity-ClearPores/Test/20220926_Schliffe"
-
 rootDir = "C:/Users/v.jayaweera/Pictures/20231012_Remelting"
 inputDir = "C:/Users/v.jayaweera/Pictures/20231012_Remelting/20231012_Remelting"
+createMask = True
+thresh_type = "Otsu"
+
 
 maskDir = createDir(rootDir, "General_Mask")
 pore_maskDir = createDir(rootDir, "pore_mask")
 allpores_maskDir = createDir(rootDir, "allpores_mask")
 coloredInDir = createDir(rootDir, "coloured_in")
 multiplyDir = createDir(rootDir, "multiply")
-
 harrisDir = createDir(rootDir, "harris_corners")
 
 
-# #TODO: implement choose to create mask or not
-# for image_name in os.listdir(inputDir):
-#     print("Processing ", image_name)
+for image_name in os.listdir(inputDir):
+    print("Processing ", image_name)
     
-#     # load original image
-#     original = cv2.imread(inputDir + "/" + image_name)
-#     gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+    # load original image
+    original = cv2.imread(inputDir + "/" + image_name)
+    gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
    
-#     # masks
-#     general_mask = cv2.imread(os.path.join(maskDir, image_name), cv2.IMREAD_GRAYSCALE)#getRemBGMask(original)  
-#     segment = colourANDMask(original, general_mask)
-#     harris_corners = getHarrisCorners(cv2.cvtColor(segment, cv2.COLOR_BGR2GRAY))
-#     cv2.imwrite(harrisDir + "/" + image_name, harris_corners)
-#     cv2.imwrite(maskDir + "/" + image_name, general_mask)
+    # masks
+    if createMask:
+        general_mask = getRemBGMask(original)  
+    else: 
+        general_mask = cv2.imread(os.path.join(maskDir, image_name), cv2.IMREAD_GRAYSCALE)
     
-#     pore_mask = createPoreMaskOtsu(gray, general_mask)
-#     #remove particles 
-#     pore_mask_inv = cv2.bitwise_not(pore_mask)
-#     pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
-#     pore_mask = cv2.bitwise_not(pore_mask_inv)
-#     cv2.imwrite(pore_maskDir + "/" + image_name, pore_mask)
+    cv2.imwrite(maskDir + "/" + image_name, general_mask)    
+    segment = colourANDMask(original, general_mask)
     
-#     # average colour of material + clear pores
-#     reg_avgColor = getAverageColour(original, general_mask, pore_mask)
     
-#     painted_in = paintInMask(segment, pore_mask, reg_avgColor)
-#     cv2.imwrite(coloredInDir + "/" + image_name, painted_in)
+    pore_mask = getPoreMask(thresh_type, gray, general_mask)
+    
+    #remove particles 
+    pore_mask_inv = cv2.bitwise_not(pore_mask)
+    pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
+    pore_mask = cv2.bitwise_not(pore_mask_inv)
+    cv2.imwrite(os.path.join(pore_maskDir, image_name), pore_mask)
+    
+    # average colour of material + clear pores
+    reg_avgColor = getAverageColour(original, general_mask, pore_mask)
+    
+    painted_in = paintInMask(segment, pore_mask, reg_avgColor)
+    cv2.imwrite(coloredInDir + "/" + image_name, painted_in)
    
-#     multiply = multiplyImages(painted_in, cv2.cvtColor(general_mask, cv2.COLOR_GRAY2BGR))           
-#     multiply = cv2.cvtColor(multiply, cv2.COLOR_BGR2GRAY)
-#     cv2.imwrite(multiplyDir + "/" + image_name, multiply)
+    multiply = multiplyImages(painted_in, cv2.cvtColor(general_mask, cv2.COLOR_GRAY2BGR))           
+    multiply = cv2.cvtColor(multiply, cv2.COLOR_BGR2GRAY)
+    cv2.imwrite(multiplyDir + "/" + image_name, multiply)
     
 
 image_names = []
 porosity = []
-    
+
+# CHANGE HERE
 fijiDir = rootDir + "/" + "fiji"
 contourfill = createDir(rootDir, "contourFill")
 
@@ -278,19 +364,19 @@ for image_name in os.listdir(pore_maskDir):
     mask = cv2.imread(maskDir + "/" + image_name, cv2.IMREAD_GRAYSCALE)
     
     #open black pore mask
-    all_pores_mask = cv2.imread(allpores_maskDir + "/" + image_name, cv2.IMREAD_GRAYSCALE)
+    black_pores_mask = cv2.imread(allpores_maskDir + "/" + image_name, cv2.IMREAD_GRAYSCALE)
     
-    # #open fiji result (clear pores mask)
-    # fiji = cv2.imread(fijiDir + "/" + image_name)
-    # fiji = cv2.cvtColor(fiji, cv2.COLOR_BGR2GRAY)
-    # clearx, cleary = np.where(fiji == 255)
+    #open fiji result (clear pores mask)
+    fiji = cv2.imread(fijiDir + "/" + image_name)
+    fiji = cv2.cvtColor(fiji, cv2.COLOR_BGR2GRAY)
+    clearx, cleary = np.where(fiji == 255)
     
-    # #colour in clear pores to black pore mask
-    # all_pores_mask[clearx, cleary] = 0
-    # all_pores_mask = cv2.medianBlur(all_pores_mask, 3)
+    #colour in clear pores to black pore mask
+    black_pores_mask[clearx, cleary] = 0
+    all_pores_mask = cv2.medianBlur(black_pores_mask, 3)
     
-    # #save full pore mask
-    # cv2.imwrite(allpores_maskDir + "/" + image_name, all_pores_mask)
+    #save full pore mask
+    cv2.imwrite(os.path.join(allpores_maskDir, image_name), all_pores_mask)
     
     plt.imshow(all_pores_mask, cmap="gray")
     plt.show()
@@ -301,6 +387,7 @@ for image_name in os.listdir(pore_maskDir):
     
     print(image_name, " ", pores/material)
     porosity.append(pores/material)
-    
-df = pd.DataFrame(data=porosity, columns=['Porosity'], index=image_names)
-df.to_excel(rootDir + "/Porosity.xlsx")
+
+
+# save data
+saveToExcel(porosity, image_names, rootDir)    
