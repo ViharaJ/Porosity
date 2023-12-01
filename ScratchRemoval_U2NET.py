@@ -38,7 +38,6 @@ Procedure (Brief Overview):
     4. Porosity = black pixles in pore mask/ white pixels in segmenting mask
     
     
-\
 '''
 
 
@@ -162,7 +161,7 @@ def createOverlayImage(img, pore_m, mask):
     
     #make mask BGR and pores appear as red on it
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-    mask[blackx, blacky,:] = [0,0,255]
+    mask[blackx, blacky,:] = [64, 204, 244]
     mask[bgx, bgy,:] = [0,255,0]
  
     # overal mask onto original
@@ -301,7 +300,7 @@ def gridSplit(img, rows, cols):
 def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting):
     global use_same_ROI
     
-    crop_coord = None
+    crop_coord = []
     image_names = [] 
     
     original = cv2.imread(rootDir + "\\" + img)
@@ -398,7 +397,7 @@ def saveToExcel(porosity_data, names, rootDir):
     
 #=============================MAIN========================================
 # Variables you can adjust
-rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
+rootDir = "U:\\LSM\\20231025_Remelting_gr\\output"
 createMask = True
 thresh_type = "Otsu"
 use_same_ROI = False
@@ -411,7 +410,7 @@ overlay_imgDir = createDir(rootDir, "Overlay")
 for image_name in os.listdir(rootDir):
     crop_coord = None
     if image_name.split(".")[-1] in acceptedFileTypes:
-        # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 5,2)
-        n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
+        n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+        # n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
 
 
