@@ -31,11 +31,11 @@ Changeable Options:
     Change the variable thresh_type to one of the following options: Otsu, Binary, Manual
     
 
-Procedure:
+Procedure (Brief Overview):
     1. REMBG remove background
-    2. Get pore mask 
-    3. Count black pixels 
-    4. Save pore mask as white background and black pores
+    2. Get mask to segment regolith from background
+    3. Get pore mask (pores are black)
+    4. Porosity = black pixles in pore mask/ white pixels in segmenting mask
 '''
 
 
