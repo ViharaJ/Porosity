@@ -56,11 +56,15 @@ def getRemBGMask(image, post_process=True):
     post_process default is True
     return  mask
     '''
+    length  = image.shape[0]
+    width = image.shape[1]
+    
     full_mask = remove(image, post_process_mask=post_process, only_mask=True)  
     
     p1 = np.full((image.shape[0]+2, image.shape[1]+2), fill_value=0, dtype="uint8")
     
-    cv2.floodFill(full_mask, p1, (0,0), 0)
+    # flood from all corners
+    cv2.floodFill(full_mask, p1, (0,0), 0)    
     
     p1 = cv2.bitwise_not(p1*255)
     
@@ -169,29 +173,56 @@ def createOverlayImage(img, pore_m, mask):
     
     return added_image
 
+
+def dawRectOnImage(image, r, colour, thickness):
+    """
+    draw box on image
+    returns: image with box 
+    """
+    
+    if len(image.shape) != len(colour):
+        print("Your colour for a rectangle on the image but match the colour depth of the image")
+        return 
+
+    return cv2.rectangle(image, (r[0], r[1]), (r[0]+r[2], r[1] + r[3]), colour, thickness)
+    
+    
+    
+
 def createROI(image, shrink_rate = 0.25):
     """
     shrink_rate: how much to shrink the image by
     returns [Top_Left_X, Top_Left_Y, Width, Height]
     """
-    # Resize image
-    im = Image.fromarray(image)
-    smaller_img = im.resize((int(im.size[0]*shrink_rate), int(im.size[1]*shrink_rate)))
-   
+    # Copy of image
+    img_copy = image.copy()
+    
+    all_r =[]
     #get ROIS
-    r = cv2.selectROIs("select the area", np.array(smaller_img)) 
-    cv2.destroyAllWindows()
-    r = np.array(r)
+    while True:      
+        # Resize image
+        im = Image.fromarray(img_copy)
+        smaller_img = im.resize((int(im.size[0]*shrink_rate), int(im.size[1]*shrink_rate)))
+        
+        # get ROI
+        r = cv2.selectROI("select the area", np.array(smaller_img)) 
+        print(r)
+        cv2.destroyAllWindows()
+        
+        # break if empty
+        if all(val == 0 for val in r):
+            break
     
-    # # remove any empty ROIS
-    # for i in range(len(r)):
-    #     if not np.any(r[i]):
-    #        del r[i]
-         
-    # resize coordinates to make original dimensions 
-    r = (r*(1/shrink_rate)).astype(int)
+
+        # resize coordinates to make original dimensions 
+        r = np.array(r)
+        r = (r*(1/shrink_rate)).astype(int)
+        all_r.append(r)
+        
+        # draw the roi
+        img_copy = dawRectOnImage(img_copy, r, (255, 0, 0), 5)
     
-    return r 
+    return all_r 
     
 
 def labelImage(image, coordinates):
@@ -397,7 +428,7 @@ def saveToExcel(porosity_data, names, rootDir):
     
 #=============================MAIN========================================
 # Variables you can adjust
-rootDir = "U:\\LSM\\20231025_Remelting_gr\\output"
+rootDir = "C:/Users/v.jayaweera/Pictures/FindingEdgesCutContour/Tjorben"
 createMask = True
 thresh_type = "Otsu"
 use_same_ROI = False
@@ -410,7 +441,7 @@ overlay_imgDir = createDir(rootDir, "Overlay")
 for image_name in os.listdir(rootDir):
     crop_coord = None
     if image_name.split(".")[-1] in acceptedFileTypes:
-        n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
-        # n,r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
+        # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+        n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
 
 
