@@ -18,6 +18,7 @@ Full Process:
         1. Open Image(s)
         2. Threshold and set bounds to extract clear Pores
         3. Save results (clear pore mask)
+Info: https://forum.image.sc/t/how-to-segment-clear-pores/86815
         
     Part 3:
         1. Open segmenting mask 
@@ -56,7 +57,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
  
 #==============================FUNCTIONS===============================           
-
 def getRemBGMask(image, post_process=True):
     '''
     post_process default is True
@@ -260,12 +260,13 @@ def saveToExcel(porosity_data, names, rootDir):
 
 
 def processPart1():
-    global inputDir, pore_maskDir, multiplyDir, harrisDir, coloredInDir,maskDir
-    for image_name in os.listdir(inputDir):
+    global rootDir, pore_maskDir, multiplyDir, harrisDir, coloredInDir,maskDir
+    
+    for image_name in os.listdir(rootDir):
         print("Processing ", image_name)
         
         # load original image
-        original = cv2.imread(inputDir + "/" + image_name)
+        original = cv2.imread(rootDir + "/" + image_name)
         gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
        
         # masks
@@ -298,11 +299,11 @@ def processPart1():
         
         
 def processPart2():
-    global inputDir, pore_maskDir, multiplyDir, harrisDir, coloredInDir, maskDir
+    global pore_maskDir, allpores_maskDir, \
+    multiplyDir, harrisDir, coloredInDir, maskDir
                 
 #=============================MAIN========================================
-rootDir = "C:/Users/v.jayaweera/Pictures/20231012_Remelting"
-inputDir = "C:/Users/v.jayaweera/Pictures/20231012_Remelting/20231012_Remelting"
+rootDir = "C:/Users/v.jayaweera/Pictures/20231012_Remelting/20231012_Remelting"
 createMask = True
 thresh_type = "Otsu"
 
@@ -313,42 +314,6 @@ allpores_maskDir = createDir(rootDir, "allpores_mask")
 coloredInDir = createDir(rootDir, "coloured_in")
 multiplyDir = createDir(rootDir, "multiply")
 harrisDir = createDir(rootDir, "harris_corners")
-
-
-for image_name in os.listdir(inputDir):
-    print("Processing ", image_name)
-    
-    # load original image
-    original = cv2.imread(inputDir + "/" + image_name)
-    gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
-   
-    # masks
-    if createMask:
-        general_mask = getRemBGMask(original)  
-    else: 
-        general_mask = cv2.imread(os.path.join(maskDir, image_name), cv2.IMREAD_GRAYSCALE)
-    
-    cv2.imwrite(maskDir + "/" + image_name, general_mask)    
-    segment = colourANDMask(original, general_mask)
-    
-    
-    pore_mask = getPoreMask(thresh_type, gray, general_mask)
-    
-    #remove particles 
-    pore_mask_inv = cv2.bitwise_not(pore_mask)
-    pore_mask_inv = cv2.medianBlur(pore_mask_inv, 5) 
-    pore_mask = cv2.bitwise_not(pore_mask_inv)
-    cv2.imwrite(os.path.join(pore_maskDir, image_name), pore_mask)
-    
-    # average colour of material + clear pores
-    reg_avgColor = getAverageColour(original, general_mask, pore_mask)
-    
-    painted_in = paintInMask(segment, pore_mask, reg_avgColor)
-    cv2.imwrite(coloredInDir + "/" + image_name, painted_in)
-   
-    multiply = multiplyImages(painted_in, cv2.cvtColor(general_mask, cv2.COLOR_GRAY2BGR))           
-    multiply = cv2.cvtColor(multiply, cv2.COLOR_BGR2GRAY)
-    cv2.imwrite(multiplyDir + "/" + image_name, multiply)
     
 
 image_names = []
