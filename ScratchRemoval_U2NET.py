@@ -36,6 +36,9 @@ Procedure (Brief Overview):
     2. Get mask to segment regolith from background
     3. Get pore mask (pores are black)
     4. Porosity = black pixles in pore mask/ white pixels in segmenting mask
+    
+    
+\
 '''
 
 
@@ -295,7 +298,9 @@ def gridSplit(img, rows, cols):
     return crop_coord
 
 
-def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, use_same_ROI=None):
+def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting):
+    global use_same_ROI
+    
     crop_coord = None
     image_names = [] 
     
@@ -396,7 +401,7 @@ def saveToExcel(porosity_data, names, rootDir):
 rootDir = "C:\\Users\\v.jayaweera\\Pictures\\FindingEdgesCutContour\\Tjorben"
 createMask = True
 thresh_type = "Otsu"
-
+use_same_ROI = False
 
 acceptedFileTypes = ["png", "jpeg", "tif"]
 maskDir =  createDir(rootDir, "Segment Mask")
