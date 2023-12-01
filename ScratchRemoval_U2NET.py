@@ -163,15 +163,22 @@ def createOverlayImage(img, pore_m, mask):
     blackx, blacky = np.where(pore_m == 0) # pore pixels
     bgx, bgy = np.where(mask == 0) # background pixels
     
+    temp = cv2.bitwise_and(pore_m, mask)
+    materialx, materialy = np.where(temp == 255) #material pixels
+    
     #make mask BGR and pores appear as red on it
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-    mask[blackx, blacky,:] = [64, 204, 244]
+    mask[blackx, blacky,:] = [200, 213, 48]
     mask[bgx, bgy,:] = [0,255,0]
- 
+    
     # overal mask onto original
-    added_image = cv2.addWeighted(img,0.4,mask,0.3,0)
+    added_image = cv2.addWeighted(img,0.7,mask,0.3,0)
+    
+    # recolour material 
+    added_image[materialx, materialy, :] = img[materialx, materialy, :]
     
     return added_image
+
 
 
 def dawRectOnImage(image, r, colour, thickness):
@@ -187,17 +194,15 @@ def dawRectOnImage(image, r, colour, thickness):
     return cv2.rectangle(image, (r[0], r[1]), (r[0]+r[2], r[1] + r[3]), colour, thickness)
     
     
-    
 
 def createROI(image, shrink_rate = 0.25):
     """
     shrink_rate: how much to shrink the image by
-    returns [Top_Left_X, Top_Left_Y, Width, Height]
+    returns array of arrays, format: [[Top_Left_X, Top_Left_Y, Width, Height]...]
     """
-    # Copy of image
     img_copy = image.copy()
-    
     all_r =[]
+    
     #get ROIS
     while True:      
         # Resize image
