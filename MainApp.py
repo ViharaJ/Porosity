@@ -48,11 +48,11 @@ class App(ctk.CTk):
         self.importBttn.grid(row=0,column=0, padx=5, pady=5)
     
         # radio buttons 
-        self.rembg_manual_frame = RadioFrame(self.frame2, ["Auto", "Manual"])
+        self.rembg_manual_frame = RadioFrame(self.frame2, ["Auto", "Manual"], "Mask Creation")
         self.rembg_manual_frame.grid(row=1,column=0, padx=5, pady=5, sticky = 'nsew')
         
         
-        self.poreThresh_frame = RadioFrame(self.frame2, ["Otsu", "Binary", "Manual"])
+        self.poreThresh_frame = RadioFrame(self.frame2, ["Otsu", "Binary", "Manual"], "Pore Mask Creation")
         self.poreThresh_frame.grid(row=2,column=0, padx=5, pady=5, sticky = 'nsew')
         
         
@@ -154,8 +154,12 @@ class App(ctk.CTk):
 #===========================PANELS===================
 
 class RadioFrame(ctk.CTkFrame):
-    def __init__(self, parent, names):
+    def __init__(self, parent, names, label):
         super().__init__(parent)
+        
+        #label 
+        l = ctk.CTkLabel(self, text=label)
+        l.pack()
  
         self.activeButton = tk.StringVar(value=names[0])
         self.names = names
