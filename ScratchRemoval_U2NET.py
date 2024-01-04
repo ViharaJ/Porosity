@@ -432,21 +432,21 @@ def saveToExcel(porosity_data, names, rootDir):
     df.to_excel(rootDir + "\\" + " Porosity.xlsx")
     
 #=============================MAIN========================================
-# Variables you can adjust
-rootDir = "C:\\Users\\t.eismann\\Desktop\\Handover Vi"
-createMask = True
-thresh_type = "Otsu"
-use_same_ROI = False
+# # Variables you can adjust
+# rootDir = "C:\\Users\\t.eismann\\Desktop\\Handover Vi"
+# createMask = True
+# thresh_type = "Otsu"
+# use_same_ROI = False
 
-acceptedFileTypes = ["png", "jpeg", "tif"]
-maskDir =  createDir(rootDir, "Segment Mask")
-pore_maskDir = createDir(rootDir, "Pore_Mask")
-overlay_imgDir = createDir(rootDir, "Overlay")
+# acceptedFileTypes = ["png", "jpeg", "tif"]
+# maskDir =  createDir(rootDir, "Segment Mask")
+# pore_maskDir = createDir(rootDir, "Pore_Mask")
+# overlay_imgDir = createDir(rootDir, "Overlay")
 
-for image_name in os.listdir(rootDir):
-    crop_coord = None
-    if image_name.split(".")[-1] in acceptedFileTypes:
-         n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
-        # n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
+# for image_name in os.listdir(rootDir):
+#     crop_coord = None
+#     if image_name.split(".")[-1] in acceptedFileTypes:
+#          n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+#         # n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
 
 

@@ -5,7 +5,7 @@ import cv2
 from PIL import Image, ImageTk
 import numpy as np
 import os
-# import ScratchRemoval_U2NET as S2U
+import ScratchRemoval_U2NET as S2U
 
 
 class App(ctk.CTk):
@@ -71,9 +71,18 @@ class App(ctk.CTk):
         print(self.poreThresh_frame.getActiveButton())
         
         #check if directroy of images was selected 
-        assert os.path.isdir(self.path) and len(self.image_names),tk.messagebox.showwarning("Invalid Directory", message="Please select a valid directory of images to analyze")
+        assert os.path.isdir(self.path) and len(self.image_names) > 0,tk.messagebox.showwarning("Invalid Directory", message="Please select a valid directory of images to analyze")
         
+        self.createDestinationDirectories(True, True)
+    
+    def createDestinationDirectories(self, mask, pore_m):
+        self.overlay_imgDir = S2U.createDir(self.path, "Overlay")
         
+        if mask:
+            self.maskDir = S2U.createDir(self.path, "Segment Mask")
+        
+        if pore_m:
+            self.pore_maskDir = S2U.createDir(self.path, "Pore_Mask")
         
     def updateCounter(self, args):
         self.image_num = self.image_num + args
@@ -95,7 +104,7 @@ class App(ctk.CTk):
         self.path = filedialog.askdirectory()
         
         self.image_names = []
-        acceptedFileTypes = ["png", "jpeg", "tif"]
+        acceptedFileTypes = ["png", "jpg", "tif"]
         
         if os.path.isdir(self.path):
             for file in os.listdir(self.path):
