@@ -21,7 +21,7 @@ class App(ctk.CTk):
         #layout
         self.rowconfigure((0,1,2), weight=1, uniform='a')
         self.columnconfigure(0, weight=1, uniform='a')
-        self.columnconfigure(1, weight=2, uniform='a')
+        self.columnconfigure(1, weight=1, uniform='a')
         
         #frame for canvas
         self.frame1 = ctk.CTkFrame(self)
@@ -35,6 +35,7 @@ class App(ctk.CTk):
         self.frame2.grid(row=0, column=1, rowspan=3, sticky = 'nsew')
         
         self.frame2.rowconfigure((0,1,2,3), weight=1, uniform='a')
+        self.frame2.columnconfigure(0,  weight=1, uniform='a')
         
         # click left and right buttons
         self.leftButton = ctk.CTkButton(self.frame1, text="<", command=lambda: self.updateCounter(-1))
@@ -49,11 +50,11 @@ class App(ctk.CTk):
     
         # radio buttons 
         self.rembg_manual_frame = RadioFrame(self.frame2, ["Auto", "Manual"], "Mask Creation")
-        self.rembg_manual_frame.grid(row=1,column=0, padx=5, pady=5, sticky = 'nsew')
+        self.rembg_manual_frame.grid(row=1,column=0, padx=15, pady=15, sticky = 'nsew')
         
         
         self.poreThresh_frame = RadioFrame(self.frame2, ["Otsu", "Binary", "Manual"], "Pore Mask Creation")
-        self.poreThresh_frame.grid(row=2,column=0, padx=5, pady=5, sticky = 'nsew')
+        self.poreThresh_frame.grid(row=2,column=0, padx=15, pady=15, sticky = 'nsew')
         
         
         #APPLY BUTTON
@@ -63,8 +64,15 @@ class App(ctk.CTk):
         
     
     def apply(self):
+        type_mask_select = self.rembg_manual_frame.getActiveButton()
+        type_pore_select = self.poreThresh_frame.getActiveButton()
+        
         print(self.rembg_manual_frame.getActiveButton())
         print(self.poreThresh_frame.getActiveButton())
+        
+        #check if directroy of images was selected 
+        assert os.path.isdir(self.path) and len(self.image_names),tk.messagebox.showwarning("Invalid Directory", message="Please select a valid directory of images to analyze")
+        
         
         
     def updateCounter(self, args):
@@ -80,6 +88,7 @@ class App(ctk.CTk):
         self.image_names = []
         #variable to track which image is being previewd 
         self.image_num = -1
+        self.path = ""
         
         
     def import_dir(self):
@@ -88,11 +97,12 @@ class App(ctk.CTk):
         self.image_names = []
         acceptedFileTypes = ["png", "jpeg", "tif"]
         
-        for file in os.listdir(self.path):
-            if file.split(".")[-1] in acceptedFileTypes:
-                self.image_names.append(os.path.join(self.path,file))
-                
-        self.load_Image()
+        if os.path.isdir(self.path):
+            for file in os.listdir(self.path):
+                if file.split(".")[-1] in acceptedFileTypes:
+                    self.image_names.append(os.path.join(self.path,file))
+                    
+            self.load_Image()
     
     def load_Image(self):
         image_path_for_loading = self.image_names[self.image_num]
