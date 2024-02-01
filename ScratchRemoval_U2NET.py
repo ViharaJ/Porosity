@@ -59,7 +59,7 @@ def getRemBGMask(image, post_process=True):
     length  = image.shape[0]
     width = image.shape[1]
     
-    full_mask = remove(image, post_process_mask=post_process, only_mask=True)  
+    full_mask = remove(image, post_process_mask=post_process, only_mask=True).astype(int)
     
     p1 = np.full((image.shape[0]+2, image.shape[1]+2), fill_value=0, dtype="uint8")
     
@@ -214,11 +214,12 @@ def createROI(image, shrink_rate = 0.25):
         print(r)
         cv2.destroyAllWindows()
         
-        # break if empty
+        # break if no selection was made
         if all(val == 0 for val in r):
             break
     
-
+        
+        
         # resize coordinates to make original dimensions 
         r = np.array(r)
         r = (r*(1/shrink_rate)).astype(int)
@@ -433,12 +434,12 @@ def saveToExcel(porosity_data, names, rootDir):
     
 #=============================MAIN========================================
 # Variables you can adjust
-rootDir = "C:\\Users\\t.eismann\\Desktop\\Handover Vi"
+rootDir = "C:\\Users\\vihar\\Pictures\\Camera Roll"
 createMask = True
 thresh_type = "Otsu"
 use_same_ROI = False
 
-acceptedFileTypes = ["png", "jpeg", "tif"]
+acceptedFileTypes = ["png", "jpg", "tif"]
 maskDir =  createDir(rootDir, "Segment Mask")
 pore_maskDir = createDir(rootDir, "Pore_Mask")
 overlay_imgDir = createDir(rootDir, "Overlay")
@@ -446,7 +447,7 @@ overlay_imgDir = createDir(rootDir, "Overlay")
 for image_name in os.listdir(rootDir):
     crop_coord = None
     if image_name.split(".")[-1] in acceptedFileTypes:
-         n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
-        # n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
+         # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+        n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
 
 
