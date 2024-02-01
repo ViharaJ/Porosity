@@ -61,7 +61,7 @@ def getRemBGMask(image, post_process=True):
     
     full_mask = remove(image, post_process_mask=post_process, only_mask=True).astype(int)
     
-    p1 = np.full((image.shape[0]+2, image.shape[1]+2), fill_value=0, dtype="uint8")
+    p1 = np.full((length + 2, width + 2), fill_value=0, dtype="uint8")
     
     # flood from all corners
     cv2.floodFill(full_mask, p1, (0,0), 0)    
@@ -434,7 +434,7 @@ def saveToExcel(porosity_data, names, rootDir):
     
 #=============================MAIN========================================
 # Variables you can adjust
-rootDir = "C:\\Users\\vihar\\Pictures\\Camera Roll"
+rootDir = "" #change to directory of images
 createMask = True
 thresh_type = "Otsu"
 use_same_ROI = False
