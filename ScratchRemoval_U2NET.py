@@ -68,9 +68,6 @@ def getRemBGMask(image, post_process=True):
     
     p1 = cv2.bitwise_not(p1*255)
     
-    plt.title("Segmenting Mask")
-    plt.imshow(p1, cmap="gray")
-    plt.show()
     return p1[1:-1, 1:-1]    
     
 
@@ -212,7 +209,7 @@ def createROI(image, shrink_rate = 0.25):
         
         # get ROI
         r = cv2.selectROI("select the area", np.array(smaller_img)) 
-        print(r)
+        
         cv2.destroyAllWindows()
         
         # break if no selection was made
@@ -220,7 +217,7 @@ def createROI(image, shrink_rate = 0.25):
             break
     
         
-        
+        print(r)
         # resize coordinates to make original dimensions 
         r = np.array(r)
         r = (r*(1/shrink_rate)).astype(int)
@@ -302,7 +299,6 @@ def calculatePorosity(m, p_m, crop_coords=None):
             
             if bg != 0:
                 porosity.append(p/bg)
-                print(porosity[-1])
             else: 
                 porosity.append("n/a")
     
@@ -381,9 +377,22 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting):
     overlay_mask = labelImage(overlay_mask, crop_coord) if len(crop_coord) > 0 else overlay_mask
     cv2.imwrite(os.path.join(overlay_imgDir, img), overlay_mask)
     
+    #plot everything
+    f, axarr = plt.subplots(1,3)
+    f.suptitle(img)
+    axarr[0].imshow(mask)
+    axarr[1].imshow(pore_mask) 
+    axarr[2].imshow(overlay_mask)
+    plt.show()
+    print("Calculating porosity of ", img, " :")
     
-    print("Calculating porosity")
-    return image_names, calculatePorosity(mask, pore_mask, crop_coord)
+    # calculate porosities
+    porosities = calculatePorosity(mask, pore_mask, crop_coord)
+    
+    for i in range(len(image_names)):
+        print("Porosity of ", image_names[i], ": ", porosities[i])
+        
+    return image_names, porosities
 
 
 def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting, rows, cols):
@@ -425,8 +434,22 @@ def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, s
     cv2.imwrite(os.path.join(overlay_imgDir, img), overlay_mask)
     
     
-    print("Calculating porosity")
-    return image_names, calculatePorosity(mask, pore_mask, crop_coord)
+    #plot everything
+    f, axarr = plt.subplots(1,3)
+    f.suptitle(img)
+    axarr[0].imshow(mask)
+    axarr[1].imshow(pore_mask) 
+    axarr[2].imshow(overlay_mask)
+    plt.show()
+    
+    # calculate porosity
+    porosities = calculatePorosity(mask, pore_mask, crop_coord)
+  
+    
+    for i in range(len(image_names)):
+        print("Porosity of ", image_names[i], ": ", porosities[i])
+        
+    return image_names, porosities
 
 
 
@@ -436,7 +459,7 @@ def saveToExcel(porosity_data, names, rootDir):
     
 #=============================MAIN========================================
 # Variables you can adjust
-rootDir = "" #change to directory of images
+rootDir = ".\\test-images" #change to directory of images
 createMask = True
 thresh_type = "Otsu"
 use_same_ROI = False
@@ -455,7 +478,7 @@ for image_name in os.listdir(rootDir):
         if not use_same_ROI:
             crop_coord = []
             
-        # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+        # n, r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
         n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
         
         allNames.extend(n)
