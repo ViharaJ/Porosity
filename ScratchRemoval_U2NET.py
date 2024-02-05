@@ -68,6 +68,7 @@ def getRemBGMask(image, post_process=True):
     
     p1 = cv2.bitwise_not(p1*255)
     
+    plt.title("Segmenting Mask")
     plt.imshow(p1, cmap="gray")
     plt.show()
     return p1[1:-1, 1:-1]    
@@ -281,14 +282,14 @@ def calculatePorosity(m, p_m, crop_coords=None):
     """
     porosity = []
     
-    if crop_coords is None:
+    if crop_coords is None or len(crop_coords) == 0:
         bg = cv2.countNonZero(m)
         p = cv2.countNonZero(cv2.bitwise_not(p_m))
         
         porosity.append(p/bg)
         print(porosity[-1])
     else:
-        for j  in range(len(crop_coords)):   
+        for j in range(len(crop_coords)):   
             each_crop = crop_coords[j]
           
             crop = m[each_crop[1]: each_crop[1] + each_crop[3], 
@@ -302,6 +303,8 @@ def calculatePorosity(m, p_m, crop_coords=None):
             if bg != 0:
                 porosity.append(p/bg)
                 print(porosity[-1])
+            else: 
+                porosity.append("n/a")
     
     return porosity
 
@@ -335,9 +338,8 @@ def gridSplit(img, rows, cols):
 
 
 def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting):
-    global use_same_ROI
+    global use_same_ROI, crop_coord
     
-    crop_coord = []
     image_names = [] 
     
     original = cv2.imread(rootDir + "\\" + img)
@@ -443,11 +445,24 @@ acceptedFileTypes = ["png", "jpg", "tif"]
 maskDir =  createDir(rootDir, "Segment Mask")
 pore_maskDir = createDir(rootDir, "Pore_Mask")
 overlay_imgDir = createDir(rootDir, "Overlay")
+allPorosity = []
+allNames = []
+crop_coord = []
 
 for image_name in os.listdir(rootDir):
-    crop_coord = None
     if image_name.split(".")[-1] in acceptedFileTypes:
-         # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
+        
+        if not use_same_ROI:
+            crop_coord = []
+            
+        # n,r = processImageGridSplit(image_name, rootDir, maskDir, pore_maskDir,overlay_imgDir,thresh_type, 2,2)
         n, r  = processImage(image_name, rootDir, maskDir, pore_maskDir, overlay_imgDir,thresh_type)
+        
+        allNames.extend(n)
+        allPorosity.extend(r)
+        
 
-
+#Save to Excel
+saveToExcel(allPorosity, allNames, rootDir)
+        
+        
