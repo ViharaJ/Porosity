@@ -381,8 +381,11 @@ def processImage(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, setting):
     f, axarr = plt.subplots(1,3)
     f.suptitle(img)
     axarr[0].imshow(mask, cmap="gray")
+    axarr[0].title.set_text("Segmenting Mask")
     axarr[1].imshow(pore_mask, cmap="gray") 
+    axarr[1].title.set_text("Pore Mask")
     axarr[2].imshow(overlay_mask)
+    axarr[2].title.set_text("Overlay")
     plt.show()
     print("Calculating porosity of ", img, " :")
     
@@ -438,8 +441,11 @@ def processImageGridSplit(img, rootDir, maskDir, pore_maskDir, overlay_imgDir, s
     f, axarr = plt.subplots(1,3)
     f.suptitle(img)
     axarr[0].imshow(mask, cmap="gray")
+    axarr[0].title.set_text("Segmenting Mask")
     axarr[1].imshow(pore_mask, cmap="gray") 
+    axarr[1].title.set_text("Pore Mask")
     axarr[2].imshow(overlay_mask)
+    axarr[2].title.set_text("Overlay")
     plt.show()
     
     # calculate porosity
